@@ -1,0 +1,20 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ./gpt-writing-backend
+      dockerfile: Dockerfile
+    volumes: 
+      - ./gpt-writing-backend:/app/backend-server
+    ports:
+      - 8088:8088
+    
+  frontend:
+    build:
+      context: ./gpt-writing-frontend
+      dockerfile: Dockerfile
+    volumes: 
+      - ./gpt-writing-frontend:/app/frontend-server
+    ports:
+      - 3000:3000
