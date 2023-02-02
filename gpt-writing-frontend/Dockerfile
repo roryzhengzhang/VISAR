@@ -8,7 +8,7 @@ COPY . .
 
 # === Build the frontend ===
 # Install dependencies
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # # Build the app
 # RUN npm run build
