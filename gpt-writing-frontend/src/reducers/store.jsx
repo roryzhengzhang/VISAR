@@ -6,5 +6,8 @@ export default configureStore({
     reducer: {
         editor: EditorReducer,
         flow: FlowReducer
-    }
+    },
+    middleware: (getDefaultMiddleware) => getDefaultMiddleware({
+        serializableCheck: false
+    })
 })

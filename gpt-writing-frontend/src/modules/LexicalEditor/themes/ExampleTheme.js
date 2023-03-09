@@ -36,6 +36,7 @@ const theme: EditorThemeClasses = {
     code: "editor-text-code" 
   },
   code: "editor-code",
+  textBlock: "text-block",
   codeHighlight: {
     atrule: "editor-tokenAttr",
     attr: "editor-tokenAttr",

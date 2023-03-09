@@ -15,7 +15,9 @@ export default function LoadingPlugin() {
                 SHOW_LOADING_COMMAND,
                 (_payload) => {
                     const show = _payload.show;
+                    console.log("loading show: ", show)
                     if (show === true) {
+                        console.log("show loading")
                         setLoading(true);
                     } else {
                         setLoading(false);

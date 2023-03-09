@@ -1,5 +1,5 @@
-import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   CAN_REDO_COMMAND,
   CAN_UNDO_COMMAND,
@@ -16,512 +16,529 @@ import {
   $createTextNode,
   $createCodeHighlightNode,
   createCommand
-} from "lexical";
-import { $isLinkNode, TOGGLE_LINK_COMMAND } from "@lexical/link";
+} from 'lexical'
+import { $isLinkNode, TOGGLE_LINK_COMMAND } from '@lexical/link'
+import {
+  setFlowModalOpen,
+  setMindmapClose,
+  setMindmapOpen
+} from '../slices/EditorSlice'
 import {
   $isParentElementRTL,
   $wrapNodes,
   $isAtNodeEnd
-} from "@lexical/selection";
-import { $getNearestNodeOfType, mergeRegister } from "@lexical/utils";
+} from '@lexical/selection'
+import { $getNearestNodeOfType, mergeRegister } from '@lexical/utils'
 import {
   INSERT_ORDERED_LIST_COMMAND,
   INSERT_UNORDERED_LIST_COMMAND,
   REMOVE_LIST_COMMAND,
   $isListNode,
   ListNode
-} from "@lexical/list";
-import { createPortal } from "react-dom";
+} from '@lexical/list'
+import { createPortal } from 'react-dom'
 import {
   $createHeadingNode,
   $createQuoteNode,
   $isHeadingNode
-} from "@lexical/rich-text";
+} from '@lexical/rich-text'
 import {
   $createCodeNode,
   $isCodeNode,
   getDefaultCodeLanguage,
   getCodeLanguages
-} from "@lexical/code";
-import ConnectWithoutContactIcon from '@mui/icons-material/ConnectWithoutContact';
+} from '@lexical/code'
+import ConnectWithoutContactIcon from '@mui/icons-material/ConnectWithoutContact'
+import { selectTextNodeByKey } from '../utils'
+import { Button, Tooltip } from '@mui/material'
+import ArrowCircleRightOutlinedIcon from '@mui/icons-material/ArrowCircleRightOutlined'
+import ArrowCircleLeftOutlinedIcon from '@mui/icons-material/ArrowCircleLeftOutlined'
+import { useDispatch, useSelector } from 'react-redux'
 
+const LowPriority = 1
 
-const LowPriority = 1;
-
-const GEN_TEXT_COMMAND = createCommand();
+const GEN_TEXT_COMMAND = createCommand()
 
 const supportedBlockTypes = new Set([
-  "paragraph",
-  "quote",
-  "code",
-  "h1",
-  "h2",
-  "ul",
-  "ol"
-]);
+  'paragraph',
+  'quote',
+  'code',
+  'h1',
+  'h2',
+  'ul',
+  'ol'
+])
 
 const blockTypeToBlockName = {
-  code: "Code Block",
-  h1: "Large Heading",
-  h2: "Small Heading",
-  h3: "Heading",
-  h4: "Heading",
-  h5: "Heading",
-  ol: "Numbered List",
-  paragraph: "Normal",
-  quote: "Quote",
-  ul: "Bulleted List"
-};
-
-function Divider() {
-  return <div className="divider" />;
+  code: 'Code Block',
+  h1: 'Large Heading',
+  h2: 'Small Heading',
+  h3: 'Heading',
+  h4: 'Heading',
+  h5: 'Heading',
+  ol: 'Numbered List',
+  paragraph: 'Normal',
+  quote: 'Quote',
+  ul: 'Bulleted List'
 }
 
-function positionEditorElement(editor, rect) {
+function Divider () {
+  return <div className='divider' />
+}
+
+function positionEditorElement (editor, rect) {
   if (rect === null) {
-    editor.style.opacity = "0";
-    editor.style.top = "-1000px";
-    editor.style.left = "-1000px";
+    editor.style.opacity = '0'
+    editor.style.top = '-1000px'
+    editor.style.left = '-1000px'
   } else {
-    editor.style.opacity = "1";
-    editor.style.top = `${rect.top + rect.height + window.pageYOffset + 10}px`;
-    editor.style.left = `${rect.left + window.pageXOffset - editor.offsetWidth / 2 + rect.width / 2
-      }px`;
+    editor.style.opacity = '1'
+    editor.style.top = `${rect.top + rect.height + window.pageYOffset + 10}px`
+    editor.style.left = `${
+      rect.left + window.pageXOffset - editor.offsetWidth / 2 + rect.width / 2
+    }px`
   }
 }
 
-function FloatingLinkEditor({ editor }) {
-  const editorRef = useRef(null);
-  const inputRef = useRef(null);
-  const mouseDownRef = useRef(false);
-  const [linkUrl, setLinkUrl] = useState("");
-  const [isEditMode, setEditMode] = useState(false);
-  const [lastSelection, setLastSelection] = useState(null);
+function FloatingLinkEditor ({ editor }) {
+  const editorRef = useRef(null)
+  const inputRef = useRef(null)
+  const mouseDownRef = useRef(false)
+  const [linkUrl, setLinkUrl] = useState('')
+  const [isEditMode, setEditMode] = useState(false)
+  const [lastSelection, setLastSelection] = useState(null)
 
   const updateLinkEditor = useCallback(() => {
-    const selection = $getSelection();
+    const selection = $getSelection()
     if ($isRangeSelection(selection)) {
-      const node = getSelectedNode(selection);
-      const parent = node.getParent();
+      const node = getSelectedNode(selection)
+      const parent = node.getParent()
       if ($isLinkNode(parent)) {
-        setLinkUrl(parent.getURL());
+        setLinkUrl(parent.getURL())
       } else if ($isLinkNode(node)) {
-        setLinkUrl(node.getURL());
+        setLinkUrl(node.getURL())
       } else {
-        setLinkUrl("");
+        setLinkUrl('')
       }
     }
-    const editorElem = editorRef.current;
-    const nativeSelection = window.getSelection();
-    const activeElement = document.activeElement;
+    const editorElem = editorRef.current
+    const nativeSelection = window.getSelection()
+    const activeElement = document.activeElement
 
     if (editorElem === null) {
-      return;
+      return
     }
 
-    const rootElement = editor.getRootElement();
+    const rootElement = editor.getRootElement()
     if (
       selection !== null &&
       !nativeSelection.isCollapsed &&
       rootElement !== null &&
       rootElement.contains(nativeSelection.anchorNode)
     ) {
-      const domRange = nativeSelection.getRangeAt(0);
-      let rect;
+      const domRange = nativeSelection.getRangeAt(0)
+      let rect
       if (nativeSelection.anchorNode === rootElement) {
-        let inner = rootElement;
+        let inner = rootElement
         while (inner.firstElementChild != null) {
-          inner = inner.firstElementChild;
+          inner = inner.firstElementChild
         }
-        rect = inner.getBoundingClientRect();
+        rect = inner.getBoundingClientRect()
       } else {
-        rect = domRange.getBoundingClientRect();
+        rect = domRange.getBoundingClientRect()
       }
 
       if (!mouseDownRef.current) {
-        positionEditorElement(editorElem, rect);
+        positionEditorElement(editorElem, rect)
       }
-      setLastSelection(selection);
-    } else if (!activeElement || activeElement.className !== "link-input") {
-      positionEditorElement(editorElem, null);
-      setLastSelection(null);
-      setEditMode(false);
-      setLinkUrl("");
+      setLastSelection(selection)
+    } else if (!activeElement || activeElement.className !== 'link-input') {
+      positionEditorElement(editorElem, null)
+      setLastSelection(null)
+      setEditMode(false)
+      setLinkUrl('')
     }
 
-    return true;
-  }, [editor]);
+    return true
+  }, [editor])
 
   useEffect(() => {
     return mergeRegister(
       editor.registerUpdateListener(({ editorState }) => {
         editorState.read(() => {
-          updateLinkEditor();
-        });
+          updateLinkEditor()
+        })
       }),
 
       editor.registerCommand(
         SELECTION_CHANGE_COMMAND,
         () => {
-          updateLinkEditor();
-          return true;
+          updateLinkEditor()
+          return true
         },
         LowPriority
       )
-    );
-  }, [editor, updateLinkEditor]);
+    )
+  }, [editor, updateLinkEditor])
 
   useEffect(() => {
     editor.getEditorState().read(() => {
-      updateLinkEditor();
-    });
-  }, [editor, updateLinkEditor]);
+      updateLinkEditor()
+    })
+  }, [editor, updateLinkEditor])
 
   useEffect(() => {
     if (isEditMode && inputRef.current) {
-      inputRef.current.focus();
+      inputRef.current.focus()
     }
-  }, [isEditMode]);
+  }, [isEditMode])
 
   return (
-    <div ref={editorRef} className="link-editor">
+    <div ref={editorRef} className='link-editor'>
       {isEditMode ? (
         <input
           ref={inputRef}
-          className="link-input"
+          className='link-input'
           value={linkUrl}
-          onChange={(event) => {
-            setLinkUrl(event.target.value);
+          onChange={event => {
+            setLinkUrl(event.target.value)
           }}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
+          onKeyDown={event => {
+            if (event.key === 'Enter') {
+              event.preventDefault()
               if (lastSelection !== null) {
-                if (linkUrl !== "") {
-                  editor.dispatchCommand(TOGGLE_LINK_COMMAND, linkUrl);
+                if (linkUrl !== '') {
+                  editor.dispatchCommand(TOGGLE_LINK_COMMAND, linkUrl)
                 }
-                setEditMode(false);
+                setEditMode(false)
               }
-            } else if (event.key === "Escape") {
-              event.preventDefault();
-              setEditMode(false);
+            } else if (event.key === 'Escape') {
+              event.preventDefault()
+              setEditMode(false)
             }
           }}
         />
       ) : (
         <>
-          <div className="link-input">
-            <a href={linkUrl} target="_blank" rel="noopener noreferrer">
+          <div className='link-input'>
+            <a href={linkUrl} target='_blank' rel='noopener noreferrer'>
               {linkUrl}
             </a>
             <div
-              className="link-edit"
-              role="button"
+              className='link-edit'
+              role='button'
               tabIndex={0}
-              onMouseDown={(event) => event.preventDefault()}
+              onMouseDown={event => event.preventDefault()}
               onClick={() => {
-                setEditMode(true);
+                setEditMode(true)
               }}
             />
           </div>
         </>
       )}
     </div>
-  );
+  )
 }
 
-function Select({ onChange, className, options, value }) {
+function Select ({ onChange, className, options, value }) {
   return (
     <select className={className} onChange={onChange} value={value}>
-      <option hidden={true} value="" />
-      {options.map((option) => (
+      <option hidden={true} value='' />
+      {options.map(option => (
         <option key={option} value={option}>
           {option}
         </option>
       ))}
     </select>
-  );
+  )
 }
 
-function getSelectedNode(selection) {
-  const anchor = selection.anchor;
-  const focus = selection.focus;
-  const anchorNode = selection.anchor.getNode();
-  const focusNode = selection.focus.getNode();
+function getSelectedNode (selection) {
+  const anchor = selection.anchor
+  const focus = selection.focus
+  const anchorNode = selection.anchor.getNode()
+  const focusNode = selection.focus.getNode()
   if (anchorNode === focusNode) {
-    return anchorNode;
+    return anchorNode
   }
-  const isBackward = selection.isBackward();
+  const isBackward = selection.isBackward()
   if (isBackward) {
-    return $isAtNodeEnd(focus) ? anchorNode : focusNode;
+    return $isAtNodeEnd(focus) ? anchorNode : focusNode
   } else {
-    return $isAtNodeEnd(anchor) ? focusNode : anchorNode;
+    return $isAtNodeEnd(anchor) ? focusNode : anchorNode
   }
 }
 
-function BlockOptionsDropdownList({
+function BlockOptionsDropdownList ({
   editor,
   blockType,
   toolbarRef,
   setShowBlockOptionsDropDown
 }) {
-  const dropDownRef = useRef(null);
+  const dropDownRef = useRef(null)
 
   useEffect(() => {
-    const toolbar = toolbarRef.current;
-    const dropDown = dropDownRef.current;
+    const toolbar = toolbarRef.current
+    const dropDown = dropDownRef.current
 
     if (toolbar !== null && dropDown !== null) {
-      const { top, left } = toolbar.getBoundingClientRect();
-      dropDown.style.top = `${top + 40}px`;
-      dropDown.style.left = `${left}px`;
+      const { top, left } = toolbar.getBoundingClientRect()
+      dropDown.style.top = `${top + 40}px`
+      dropDown.style.left = `${left}px`
     }
-  }, [dropDownRef, toolbarRef]);
+  }, [dropDownRef, toolbarRef])
 
   useEffect(() => {
-    const dropDown = dropDownRef.current;
-    const toolbar = toolbarRef.current;
+    const dropDown = dropDownRef.current
+    const toolbar = toolbarRef.current
 
     if (dropDown !== null && toolbar !== null) {
-      const handle = (event) => {
-        const target = event.target;
+      const handle = event => {
+        const target = event.target
 
         if (!dropDown.contains(target) && !toolbar.contains(target)) {
-          setShowBlockOptionsDropDown(false);
+          setShowBlockOptionsDropDown(false)
         }
-      };
-      document.addEventListener("click", handle);
+      }
+      document.addEventListener('click', handle)
 
       return () => {
-        document.removeEventListener("click", handle);
-      };
+        document.removeEventListener('click', handle)
+      }
     }
-  }, [dropDownRef, setShowBlockOptionsDropDown, toolbarRef]);
+  }, [dropDownRef, setShowBlockOptionsDropDown, toolbarRef])
 
   const formatParagraph = () => {
-    if (blockType !== "paragraph") {
+    if (blockType !== 'paragraph') {
       editor.update(() => {
-        const selection = $getSelection();
+        const selection = $getSelection()
 
         if ($isRangeSelection(selection)) {
-          $wrapNodes(selection, () => $createParagraphNode());
+          $wrapNodes(selection, () => $createParagraphNode())
         }
-      });
+      })
     }
-    setShowBlockOptionsDropDown(false);
-  };
+    setShowBlockOptionsDropDown(false)
+  }
 
   const formatLargeHeading = () => {
-    if (blockType !== "h1") {
+    if (blockType !== 'h1') {
       editor.update(() => {
-        const selection = $getSelection();
+        const selection = $getSelection()
 
         if ($isRangeSelection(selection)) {
-          $wrapNodes(selection, () => $createHeadingNode("h1"));
+          $wrapNodes(selection, () => $createHeadingNode('h1'))
         }
-      });
+      })
     }
-    setShowBlockOptionsDropDown(false);
-  };
+    setShowBlockOptionsDropDown(false)
+  }
 
   const formatSmallHeading = () => {
-    if (blockType !== "h2") {
+    if (blockType !== 'h2') {
       editor.update(() => {
-        const selection = $getSelection();
+        const selection = $getSelection()
 
         if ($isRangeSelection(selection)) {
-          $wrapNodes(selection, () => $createHeadingNode("h2"));
+          $wrapNodes(selection, () => $createHeadingNode('h2'))
         }
-      });
+      })
     }
-    setShowBlockOptionsDropDown(false);
-  };
+    setShowBlockOptionsDropDown(false)
+  }
 
   const formatBulletList = () => {
-    if (blockType !== "ul") {
-      editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND);
+    if (blockType !== 'ul') {
+      editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND)
     } else {
-      editor.dispatchCommand(REMOVE_LIST_COMMAND);
+      editor.dispatchCommand(REMOVE_LIST_COMMAND)
     }
-    setShowBlockOptionsDropDown(false);
-  };
+    setShowBlockOptionsDropDown(false)
+  }
 
   const formatNumberedList = () => {
-    if (blockType !== "ol") {
-      editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND);
+    if (blockType !== 'ol') {
+      editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND)
     } else {
-      editor.dispatchCommand(REMOVE_LIST_COMMAND);
+      editor.dispatchCommand(REMOVE_LIST_COMMAND)
     }
-    setShowBlockOptionsDropDown(false);
-  };
+    setShowBlockOptionsDropDown(false)
+  }
 
   const formatQuote = () => {
-    if (blockType !== "quote") {
+    if (blockType !== 'quote') {
       editor.update(() => {
-        const selection = $getSelection();
+        const selection = $getSelection()
 
         if ($isRangeSelection(selection)) {
-          $wrapNodes(selection, () => $createQuoteNode());
+          $wrapNodes(selection, () => $createQuoteNode())
         }
-      });
+      })
     }
-    setShowBlockOptionsDropDown(false);
-  };
+    setShowBlockOptionsDropDown(false)
+  }
 
   const formatCode = () => {
-    if (blockType !== "code") {
+    if (blockType !== 'code') {
       editor.update(() => {
-        const selection = $getSelection();
+        const selection = $getSelection()
 
         if ($isRangeSelection(selection)) {
-          $wrapNodes(selection, () => $createCodeNode());
+          $wrapNodes(selection, () => $createCodeNode())
         }
-      });
+      })
     }
-    setShowBlockOptionsDropDown(false);
-  };
+    setShowBlockOptionsDropDown(false)
+  }
 
   return (
-    <div className="dropdown" ref={dropDownRef}>
-      <button className="item" onClick={formatParagraph}>
-        <span className="icon paragraph" />
-        <span className="text">Normal</span>
-        {blockType === "paragraph" && <span className="active" />}
+    <div className='dropdown' ref={dropDownRef}>
+      <button className='item' onClick={formatParagraph}>
+        <span className='icon paragraph' />
+        <span className='text'>Normal</span>
+        {blockType === 'paragraph' && <span className='active' />}
       </button>
-      <button className="item" onClick={formatLargeHeading}>
-        <span className="icon large-heading" />
-        <span className="text">Large Heading</span>
-        {blockType === "h1" && <span className="active" />}
+      <button className='item' onClick={formatLargeHeading}>
+        <span className='icon large-heading' />
+        <span className='text'>Large Heading</span>
+        {blockType === 'h1' && <span className='active' />}
       </button>
-      <button className="item" onClick={formatSmallHeading}>
-        <span className="icon small-heading" />
-        <span className="text">Small Heading</span>
-        {blockType === "h2" && <span className="active" />}
+      <button className='item' onClick={formatSmallHeading}>
+        <span className='icon small-heading' />
+        <span className='text'>Small Heading</span>
+        {blockType === 'h2' && <span className='active' />}
       </button>
-      <button className="item" onClick={formatBulletList}>
-        <span className="icon bullet-list" />
-        <span className="text">Bullet List</span>
-        {blockType === "ul" && <span className="active" />}
+      <button className='item' onClick={formatBulletList}>
+        <span className='icon bullet-list' />
+        <span className='text'>Bullet List</span>
+        {blockType === 'ul' && <span className='active' />}
       </button>
-      <button className="item" onClick={formatNumberedList}>
-        <span className="icon numbered-list" />
-        <span className="text">Numbered List</span>
-        {blockType === "ol" && <span className="active" />}
+      <button className='item' onClick={formatNumberedList}>
+        <span className='icon numbered-list' />
+        <span className='text'>Numbered List</span>
+        {blockType === 'ol' && <span className='active' />}
       </button>
-      <button className="item" onClick={formatQuote}>
-        <span className="icon quote" />
-        <span className="text">Quote</span>
-        {blockType === "quote" && <span className="active" />}
+      <button className='item' onClick={formatQuote}>
+        <span className='icon quote' />
+        <span className='text'>Quote</span>
+        {blockType === 'quote' && <span className='active' />}
       </button>
-      <button className="item" onClick={formatCode}>
-        <span className="icon code" />
-        <span className="text">Code Block</span>
-        {blockType === "code" && <span className="active" />}
+      <button className='item' onClick={formatCode}>
+        <span className='icon code' />
+        <span className='text'>Code Block</span>
+        {blockType === 'code' && <span className='active' />}
       </button>
     </div>
-  );
+  )
 }
 
-export default function ToolbarPlugin() {
-  const [editor] = useLexicalComposerContext();
-  const toolbarRef = useRef(null);
-  const [canUndo, setCanUndo] = useState(false);
-  const [canRedo, setCanRedo] = useState(false);
-  const [blockType, setBlockType] = useState("paragraph");
-  const [selectedElementKey, setSelectedElementKey] = useState(null);
-  const [showBlockOptionsDropDown, setShowBlockOptionsDropDown] = useState(
-    false
-  );
-  const [codeLanguage, setCodeLanguage] = useState("");
-  const [isRTL, setIsRTL] = useState(false);
-  const [isLink, setIsLink] = useState(false);
-  const [isBold, setIsBold] = useState(false);
-  const [isItalic, setIsItalic] = useState(false);
-  const [isUnderline, setIsUnderline] = useState(false);
-  const [isStrikethrough, setIsStrikethrough] = useState(false);
-  const [isCode, setIsCode] = useState(false);
-  const [isPredicting, setIsPredicting] = useState(false);
+export default function ToolbarPlugin () {
+  const [editor] = useLexicalComposerContext()
+  const toolbarRef = useRef(null)
+  const [canUndo, setCanUndo] = useState(false)
+  const [canRedo, setCanRedo] = useState(false)
+  const [blockType, setBlockType] = useState('paragraph')
+  const [selectedElementKey, setSelectedElementKey] = useState(null)
+  const [showBlockOptionsDropDown, setShowBlockOptionsDropDown] =
+    useState(false)
+  const condition = useSelector(state => state.editor.condition)
+  const [codeLanguage, setCodeLanguage] = useState('')
+  const [isRTL, setIsRTL] = useState(false)
+  const [isLink, setIsLink] = useState(false)
+  const [isBold, setIsBold] = useState(false)
+  const [isItalic, setIsItalic] = useState(false)
+  const [isUnderline, setIsUnderline] = useState(false)
+  const [isStrikethrough, setIsStrikethrough] = useState(false)
+  const [isCode, setIsCode] = useState(false)
+  const [isPredicting, setIsPredicting] = useState(false)
+  const dispatch = useDispatch()
+  const mindMapOpen = useSelector(state => state.editor.mindmapOpen)
 
   const updateToolbar = useCallback(() => {
-    const selection = $getSelection();
+    const selection = $getSelection()
     if ($isRangeSelection(selection)) {
-      const anchorNode = selection.anchor.getNode();
+      const anchorNode = selection.anchor.getNode()
       const element =
-        anchorNode.getKey() === "root"
+        anchorNode.getKey() === 'root'
           ? anchorNode
-          : anchorNode.getTopLevelElementOrThrow();
-      const elementKey = element.getKey();
-      const elementDOM = editor.getElementByKey(elementKey);
+          : anchorNode.getTopLevelElementOrThrow()
+      const elementKey = element.getKey()
+      const elementDOM = editor.getElementByKey(elementKey)
       if (elementDOM !== null) {
-        setSelectedElementKey(elementKey);
+        setSelectedElementKey(elementKey)
         if ($isListNode(element)) {
-          const parentList = $getNearestNodeOfType(anchorNode, ListNode);
-          const type = parentList ? parentList.getTag() : element.getTag();
-          setBlockType(type);
+          const parentList = $getNearestNodeOfType(anchorNode, ListNode)
+          const type = parentList ? parentList.getTag() : element.getTag()
+          setBlockType(type)
         } else {
           const type = $isHeadingNode(element)
             ? element.getTag()
-            : element.getType();
-          setBlockType(type);
+            : element.getType()
+          setBlockType(type)
           if ($isCodeNode(element)) {
-            setCodeLanguage(element.getLanguage() || getDefaultCodeLanguage());
+            setCodeLanguage(element.getLanguage() || getDefaultCodeLanguage())
           }
         }
       }
       // Update text format
-      setIsBold(selection.hasFormat("bold"));
-      setIsItalic(selection.hasFormat("italic"));
-      setIsUnderline(selection.hasFormat("underline"));
-      setIsStrikethrough(selection.hasFormat("strikethrough"));
-      setIsCode(selection.hasFormat("code"));
-      setIsRTL($isParentElementRTL(selection));
+      setIsBold(selection.hasFormat('bold'))
+      setIsItalic(selection.hasFormat('italic'))
+      setIsUnderline(selection.hasFormat('underline'))
+      setIsStrikethrough(selection.hasFormat('strikethrough'))
+      setIsCode(selection.hasFormat('code'))
+      setIsRTL($isParentElementRTL(selection))
 
       // Update links
-      const node = getSelectedNode(selection);
-      const parent = node.getParent();
+      const node = getSelectedNode(selection)
+      const parent = node.getParent()
       if ($isLinkNode(parent) || $isLinkNode(node)) {
-        setIsLink(true);
+        setIsLink(true)
       } else {
-        setIsLink(false);
+        setIsLink(false)
       }
     }
-  }, [editor]);
+  }, [editor])
 
   const genTextFromGPT = useCallback(() => {
-    const selection = $getSelection();
+    const selection = $getSelection()
     if ($isRangeSelection(selection)) {
-      console.log(`selection: ${selection.getTextContent()}`)
+      // console.log(`selection: ${selection.getTextContent()}`)
 
-      const fetchPromise = fetch("http://104.197.53.248:8088/?" + new URLSearchParams({
-        prompt: selection.getTextContent()
-      }), {
-        mode: "cors"
-      })
+      const fetchPromise = fetch(
+        'http://104.197.53.248:8088/?' +
+          new URLSearchParams({
+            prompt: selection.getTextContent()
+          }),
+        {
+          mode: 'cors'
+        }
+      )
 
-      fetchPromise.then(res => {
-        return res.json()
-      }).then(res => {
-        const text = res['response'].trim()
-
-        editor.update(() => {
-          console.log(`gpt response: ${text}`)
-
-          const root = $getRoot();
-
-          // Create a new ParagraphNode
-          const paragraphNode = $createParagraphNode();
-
-          // Create a new TextNode
-          const textNode = $createTextNode(text);
-
-          // Append the text node to the paragraph
-          paragraphNode.append(textNode);
-
-          // Finally, append the paragraph to the root
-          root.append(paragraphNode);
+      fetchPromise
+        .then(res => {
+          return res.json()
         })
-      })
+        .then(res => {
+          const text = res['response'].trim()
 
+          editor.update(() => {
+            // console.log(`gpt response: ${text}`)
+
+            const root = $getRoot()
+
+            // Create a new ParagraphNode
+            const paragraphNode = $createParagraphNode()
+
+            // Create a new TextNode
+            const textNode = $createTextNode(text)
+
+            // Append the text node to the paragraph
+            paragraphNode.append(textNode)
+
+            // Finally, append the paragraph to the root
+            root.append(paragraphNode)
+          })
+        })
     }
   }, [editor])
 
@@ -529,237 +546,267 @@ export default function ToolbarPlugin() {
     return mergeRegister(
       editor.registerUpdateListener(({ editorState }) => {
         editorState.read(() => {
-          updateToolbar();
-        });
+          updateToolbar()
+        })
       }),
       editor.registerCommand(
         SELECTION_CHANGE_COMMAND,
         (_payload, newEditor) => {
-          updateToolbar();
-          return false;
+          updateToolbar()
+          return false
         },
         LowPriority
       ),
       editor.registerCommand(
         CAN_UNDO_COMMAND,
-        (payload) => {
-          setCanUndo(payload);
-          return false;
+        payload => {
+          setCanUndo(payload)
+          return false
         },
         LowPriority
       ),
       editor.registerCommand(
         CAN_REDO_COMMAND,
-        (payload) => {
-          setCanRedo(payload);
-          return false;
+        payload => {
+          setCanRedo(payload)
+          return false
         },
         LowPriority
       ),
       editor.registerCommand(
         GEN_TEXT_COMMAND,
-        (payload) => {
-
-          genTextFromGPT();
-          return false;
+        payload => {
+          // genTextFromGPT();
+          selectTextNodeByKey(editor, '1')
+          return false
         },
         LowPriority
       )
-    );
-  }, [editor, updateToolbar]);
+    )
+  }, [editor, updateToolbar])
 
-  const codeLanguges = useMemo(() => getCodeLanguages(), []);
+  const codeLanguges = useMemo(() => getCodeLanguages(), [])
   const onCodeLanguageSelect = useCallback(
-    (e) => {
+    e => {
       editor.update(() => {
         if (selectedElementKey !== null) {
-          const node = $getNodeByKey(selectedElementKey);
+          const node = $getNodeByKey(selectedElementKey)
           if ($isCodeNode(node)) {
-            node.setLanguage(e.target.value);
+            node.setLanguage(e.target.value)
           }
         }
-      });
+      })
     },
     [editor, selectedElementKey]
-  );
+  )
 
   const insertLink = useCallback(() => {
     if (!isLink) {
-      editor.dispatchCommand(TOGGLE_LINK_COMMAND, "https://");
+      editor.dispatchCommand(TOGGLE_LINK_COMMAND, 'https://')
     } else {
-      editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
+      editor.dispatchCommand(TOGGLE_LINK_COMMAND, null)
     }
-  }, [editor, isLink]);
+  }, [editor, isLink])
 
   const generateText = useCallback(() => {
-    editor.dispatchCommand(GEN_TEXT_COMMAND, null);
+    editor.dispatchCommand(GEN_TEXT_COMMAND, null)
   }, [editor, isPredicting])
 
   return (
-    <div className="toolbar" ref={toolbarRef}>
-      <button
-        disabled={!canUndo}
-        onClick={() => {
-          editor.dispatchCommand(UNDO_COMMAND);
-        }}
-        className="toolbar-item spaced"
-        aria-label="Undo"
-      >
-        <i className="format undo" />
-      </button>
-      <button
-        disabled={!canRedo}
-        onClick={() => {
-          editor.dispatchCommand(REDO_COMMAND);
-        }}
-        className="toolbar-item"
-        aria-label="Redo"
-      >
-        <i className="format redo" />
-      </button>
-      <Divider />
-      {supportedBlockTypes.has(blockType) && (
-        <>
-          <button
-            className="toolbar-item block-controls"
-            onClick={() =>
-              setShowBlockOptionsDropDown(!showBlockOptionsDropDown)
-            }
-            aria-label="Formatting Options"
-          >
-            <span className={"icon block-type " + blockType} />
-            <span className="text">{blockTypeToBlockName[blockType]}</span>
-            <i className="chevron-down" />
-          </button>
-          {showBlockOptionsDropDown &&
-            createPortal(
-              <BlockOptionsDropdownList
-                editor={editor}
-                blockType={blockType}
-                toolbarRef={toolbarRef}
-                setShowBlockOptionsDropDown={setShowBlockOptionsDropDown}
-              />,
-              document.body
-            )}
-          <Divider />
-        </>
-      )}
-      {blockType === "code" ? (
-        <>
-          <Select
-            className="toolbar-item code-language"
-            onChange={onCodeLanguageSelect}
-            options={codeLanguges}
-            value={codeLanguage}
-          />
-          <i className="chevron-down inside" />
-        </>
-      ) : (
-        <>
-          <button
-            onClick={() => {
-              editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold");
-            }}
-            className={"toolbar-item spaced " + (isBold ? "active" : "")}
-            aria-label="Format Bold"
-          >
-            <i className="format bold" />
-          </button>
-          <button
-            onClick={() => {
-              editor.dispatchCommand(FORMAT_TEXT_COMMAND, "italic");
-            }}
-            className={"toolbar-item spaced " + (isItalic ? "active" : "")}
-            aria-label="Format Italics"
-          >
-            <i className="format italic" />
-          </button>
-          <button
-            onClick={() => {
-              editor.dispatchCommand(FORMAT_TEXT_COMMAND, "underline");
-            }}
-            className={"toolbar-item spaced " + (isUnderline ? "active" : "")}
-            aria-label="Format Underline"
-          >
-            <i className="format underline" />
-          </button>
-          <button
-            onClick={() => {
-              editor.dispatchCommand(FORMAT_TEXT_COMMAND, "strikethrough");
-            }}
-            className={
-              "toolbar-item spaced " + (isStrikethrough ? "active" : "")
-            }
-            aria-label="Format Strikethrough"
-          >
-            <i className="format strikethrough" />
-          </button>
-          <button
-            onClick={() => {
-              editor.dispatchCommand(FORMAT_TEXT_COMMAND, "code");
-            }}
-            className={"toolbar-item spaced " + (isCode ? "active" : "")}
-            aria-label="Insert Code"
-          >
-            <i className="format code" />
-          </button>
-          <button
-            onClick={insertLink}
-            className={"toolbar-item spaced " + (isLink ? "active" : "")}
-            aria-label="Insert Link"
-          >
-            <i className="format link" />
-          </button>
-          <button
-            onClick={generateText}
-            className={
-              "toolbar-item spaced " + (isPredicting ? "active" : "")
-            }
-            aria-label="Insert Predict"
-          >
-            <ConnectWithoutContactIcon />
-          </button>
-          {isLink &&
-            createPortal(<FloatingLinkEditor editor={editor} />, document.body)}
-          <Divider />
-          <button
-            onClick={() => {
-              editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "left");
-            }}
-            className="toolbar-item spaced"
-            aria-label="Left Align"
-          >
-            <i className="format left-align" />
-          </button>
-          <button
-            onClick={() => {
-              editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "center");
-            }}
-            className="toolbar-item spaced"
-            aria-label="Center Align"
-          >
-            <i className="format center-align" />
-          </button>
-          <button
-            onClick={() => {
-              editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "right");
-            }}
-            className="toolbar-item spaced"
-            aria-label="Right Align"
-          >
-            <i className="format right-align" />
-          </button>
-          <button
-            onClick={() => {
-              editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "justify");
-            }}
-            className="toolbar-item"
-            aria-label="Justify Align"
-          >
-            <i className="format justify-align" />
-          </button>{" "}
-        </>
+    <div className='toolbar-wrapper' ref={toolbarRef}>
+      <div className='toolbar'>
+        <button
+          disabled={!canUndo}
+          onClick={() => {
+            editor.dispatchCommand(UNDO_COMMAND)
+          }}
+          className='toolbar-item spaced'
+          aria-label='Undo'
+        >
+          <i className='format undo' />
+        </button>
+        <button
+          disabled={!canRedo}
+          onClick={() => {
+            editor.dispatchCommand(REDO_COMMAND)
+          }}
+          className='toolbar-item'
+          aria-label='Redo'
+        >
+          <i className='format redo' />
+        </button>
+        <Divider />
+        {supportedBlockTypes.has(blockType) && (
+          <>
+            <button
+              className='toolbar-item block-controls'
+              onClick={() =>
+                setShowBlockOptionsDropDown(!showBlockOptionsDropDown)
+              }
+              aria-label='Formatting Options'
+            >
+              <span className={'icon block-type ' + blockType} />
+              <span className='text'>{blockTypeToBlockName[blockType]}</span>
+              <i className='chevron-down' />
+            </button>
+            {showBlockOptionsDropDown &&
+              createPortal(
+                <BlockOptionsDropdownList
+                  editor={editor}
+                  blockType={blockType}
+                  toolbarRef={toolbarRef}
+                  setShowBlockOptionsDropDown={setShowBlockOptionsDropDown}
+                />,
+                document.body
+              )}
+            <Divider />
+          </>
+        )}
+        {blockType === 'code' ? (
+          <>
+            <Select
+              className='toolbar-item code-language'
+              onChange={onCodeLanguageSelect}
+              options={codeLanguges}
+              value={codeLanguage}
+            />
+            <i className='chevron-down inside' />
+          </>
+        ) : (
+          <>
+            <button
+              onClick={() => {
+                editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'bold')
+              }}
+              className={'toolbar-item spaced ' + (isBold ? 'active' : '')}
+              aria-label='Format Bold'
+            >
+              <i className='format bold' />
+            </button>
+            <button
+              onClick={() => {
+                editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'italic')
+              }}
+              className={'toolbar-item spaced ' + (isItalic ? 'active' : '')}
+              aria-label='Format Italics'
+            >
+              <i className='format italic' />
+            </button>
+            <button
+              onClick={() => {
+                editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'underline')
+              }}
+              className={'toolbar-item spaced ' + (isUnderline ? 'active' : '')}
+              aria-label='Format Underline'
+            >
+              <i className='format underline' />
+            </button>
+            <button
+              onClick={() => {
+                editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'strikethrough')
+              }}
+              className={
+                'toolbar-item spaced ' + (isStrikethrough ? 'active' : '')
+              }
+              aria-label='Format Strikethrough'
+            >
+              <i className='format strikethrough' />
+            </button>
+            <button
+              onClick={() => {
+                editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'code')
+              }}
+              className={'toolbar-item spaced ' + (isCode ? 'active' : '')}
+              aria-label='Insert Code'
+            >
+              <i className='format code' />
+            </button>
+            <button
+              onClick={insertLink}
+              className={'toolbar-item spaced ' + (isLink ? 'active' : '')}
+              aria-label='Insert Link'
+            >
+              <i className='format link' />
+            </button>
+            <button
+              onClick={generateText}
+              className={
+                'toolbar-item spaced ' + (isPredicting ? 'active' : '')
+              }
+              aria-label='Insert Predict'
+            >
+              <ConnectWithoutContactIcon />
+            </button>
+            {isLink &&
+              createPortal(
+                <FloatingLinkEditor editor={editor} />,
+                document.body
+              )}
+            <Divider />
+            <button
+              onClick={() => {
+                editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, 'left')
+              }}
+              className='toolbar-item spaced'
+              aria-label='Left Align'
+            >
+              <i className='format left-align' />
+            </button>
+            <button
+              onClick={() => {
+                editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, 'center')
+              }}
+              className='toolbar-item spaced'
+              aria-label='Center Align'
+            >
+              <i className='format center-align' />
+            </button>
+            <button
+              onClick={() => {
+                editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, 'right')
+              }}
+              className='toolbar-item spaced'
+              aria-label='Right Align'
+            >
+              <i className='format right-align' />
+            </button>
+            <button
+              onClick={() => {
+                editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, 'justify')
+              }}
+              className='toolbar-item'
+              aria-label='Justify Align'
+            >
+              <i className='format justify-align' />
+            </button>
+          </>
+        )}
+      </div>
+      {condition === 'full' && (
+        <div className='toolbar-right'>
+          {!mindMapOpen ? (
+            <Tooltip title='Show mindmap' placement='top'>
+              <Button
+                className='toolbar-item'
+                style={{ color: '#8a817c' }}
+                onClick={() => dispatch(setMindmapOpen())}
+              >
+                <ArrowCircleLeftOutlinedIcon />
+              </Button>
+            </Tooltip>
+          ) : (
+            <Tooltip title='Hide mindmap' placement='top'>
+              <Button
+                className='toolbar-item'
+                style={{ color: '#8a817c' }}
+                onClick={() => dispatch(setMindmapClose())}
+              >
+                <ArrowCircleRightOutlinedIcon />
+              </Button>
+            </Tooltip>
+          )}
+        </div>
       )}
     </div>
-  );
+  )
 }

@@ -58,7 +58,7 @@ export async function getDependencies(node, type=null) {
         const readResult = await session.executeRead(tx =>
             tx.run(readQuery)
         ).then(res => {
-            console.log("executed readQuery");
+            // console.log("executed readQuery");
             // console.log(res.records);
             return res.records;
         });

@@ -45,16 +45,17 @@ h1 {
 }
 
 .editor-container {
-  margin: 20px auto 20px auto;
+  /* margin: 20px auto 20px auto;
   border-radius: 2px;
-  max-width: 50vw;
+  max-width: 50vw; */
   color: #000;
-  position: relative;
+  max-width: 100%;
+  /* position: relative;
   line-height: 20px;
   font-weight: 400;
   text-align: left;
   border-top-left-radius: 10px;
-  border-top-right-radius: 10px;
+  border-top-right-radius: 10px; */
 }
 
 .editor-inner {
@@ -63,7 +64,7 @@ h1 {
 }
 
 .editor-input {
-  min-height: 150px;
+  min-height: 80vh;
   resize: none;
   font-size: 15px;
   caret-color: rgb(5, 5, 5);
@@ -110,8 +111,9 @@ h1 {
 .editor-text-code {
   background-color: rgb(240, 242, 245);
   padding: 1px 0.25rem;
-  font-family: Menlo, Consolas, Monaco, monospace;
-  font-size: 94%;
+  /* font-family: Menlo, Consolas, Monaco, monospace; */
+  font-family: Monaco;
+  font-size: 60%;
 }
 
 .editor-link {
@@ -137,7 +139,8 @@ h1 {
 
 .editor-code {
   background-color: rgb(240, 242, 245);
-  font-family: Menlo, Consolas, Monaco, monospace;
+  /* font-family: Menlo, Consolas, Monaco, monospace; */
+  font-family: Monaco;
   display: block;
   padding: 8px 8px 8px 52px;
   line-height: 1.53;
@@ -334,6 +337,26 @@ pre::-webkit-scrollbar-thumb {
   padding: 10px;
 }
 
+.rewrite-button {
+  width: 90%;
+}
+
+.rewrite-modal {
+  position: absolute;
+  z-index: 100;
+  top: -10000px;
+  left: -10000px;
+  opacity: 0;
+  display: flex;
+  background: #fff;
+  box-shadow: 2px 5px 10px rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  transition: opacity 0.5s;
+  flex-direction: column;
+  width: 200px;
+  padding: 10px;
+}
+
 .emoji {
   color: transparent;
   background-size: 16px 16px;
@@ -368,7 +391,7 @@ pre::-webkit-scrollbar-thumb {
   top: -10000px;
   left: -10000px;
   opacity: 0;
-  display: inline-block;
+  display: flex;
   margin-bottom: 1px;
   background: #fff;
   padding: 4px;
@@ -379,7 +402,7 @@ pre::-webkit-scrollbar-thumb {
 
 .floatbuttongroup button.float-item {
   border: 0;
-  display: inline-block;
+  display: flex;
   background: none;
   border-radius: 10px;
   padding: 8px;
@@ -387,13 +410,32 @@ pre::-webkit-scrollbar-thumb {
   vertical-align: middle;
 }
 
+.toolbar-wrapper {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: 100%;
+  background: #fff;
+  justify-content: space-between;
+  /* border-top-left-radius: 10px;
+  border-top-right-radius: 10px; */
+  margin-bottom: 1px;
+}
+
+.toolbar-right {
+  display: flex;
+  padding: 4px;
+  vertical-align: middle;
+}
+
+/* .toolbar-arrow-right {
+  padding: 4px;
+  vertical-align: middle;
+} */
+
 .toolbar {
   display: flex;
-  margin-bottom: 1px;
-  background: #fff;
   padding: 4px;
-  border-top-left-radius: 10px;
-  border-top-right-radius: 10px;
   vertical-align: middle;
 }
 
@@ -795,11 +837,14 @@ i.justify-align {
 }
 
 .highlight-dep-elb {
-  background-color: #cdb4db;
+  /* background-color: #cdb4db; */
   padding: 1px 0.25rem;
-  font-family: Menlo, Consolas, Monaco, monospace;
+  /* font-family: Menlo, Consolas, Monaco, monospace; */
+  font-family: Menlo;
   font-size: 94%;
   border-radius: 25px;
+  margin-bottom: 1px;
+  opacity: 0.5;
 }
 
 .react-flow__node-customNode {
@@ -820,3 +865,66 @@ i.justify-align {
   box-shadow: 0 0 6px 2px rgba(0, 0, 0, 0.2);
   cursor: pointer;
 }
+
+.reactflow-view-output {
+  display: block;
+  padding: 5px;
+  white-space: pre-wrap;
+  margin: 1px auto 10px auto;
+  height: 600px;
+  position: relative;
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+  overflow: auto;
+  cursor: auto;
+}
+
+.reactflow-view-output-new {
+  /* display: block;
+  padding: 5px;
+  white-space: pre-wrap;
+  margin: 1px auto 10px auto;
+  height: 600px;
+  position: relative;
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px; */
+  overflow: auto;
+  cursor: auto;
+}
+
+.reactflow-view-output:hover {
+  cursor: grab;
+}
+
+.text-block {
+  /* background: rgba(255, 212, 0, 0.14); */
+  padding-bottom: 2px;
+  margin-bottom: 1px;
+}
+
+.highlight-dep-elb:hover {
+  cursor: pointer;
+  opacity: 1;
+  /* padding-bottom: 0.5px; */
+}
+
+.highlight-dep-elb:active {
+  pointer-events: none; 
+  opacity: 1;
+  /* padding-bottom: 0.5px; */
+}
+
+.highlight-dep-leb-selected {
+  padding: 1px 0.25rem;
+  /* font-family: Menlo, Consolas, Monaco, monospace; */
+  font-family: Menlo;
+  font-size: 94%;
+  border-radius: 25px;
+  margin-bottom: 1px;
+  opacity: 1;
+}
+
+/* .text-block.selected {
+  background: rgba(255, 212, 0, 0.5);
+  border-bottom: 1px solid rgba(255, 212, 0, 1);
+} */

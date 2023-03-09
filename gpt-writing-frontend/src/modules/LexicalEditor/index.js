@@ -2,7 +2,7 @@ import Editor from "./Editor";
 
 export default {
   routeProps: {
-      path: "/workspace",
+      path: "/editor",
       element: <Editor />
   },
   name: 'Editor'

@@ -1,6 +1,7 @@
 import LexicalEditor from "./LexicalEditor";
-import MainLayout from "./MainLayout";
+import Login from "./Login";
 
 export default [
-    LexicalEditor
+    LexicalEditor,
+    Login
 ];

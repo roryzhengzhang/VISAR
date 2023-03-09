@@ -16,7 +16,9 @@ import {
 } from "lexical";
 import {
   ELABORATE_COMMAND,
+  EVIDENCE_COMMAND,
   lowPriority,
+  highPriority,
 } from "../commands/SelfDefinedCommands";
 import { $getNearestNodeOfType, mergeRegister } from "@lexical/utils";
 import Paper from "@mui/material/Paper";
@@ -45,15 +47,18 @@ import { SHOW_LOADING_COMMAND } from "../commands/SelfDefinedCommands";
 import { Container } from "@mui/system";
 import { useSelector, useDispatch } from "react-redux";
 import {
-  setModalOpen,
+  setFlowModalOpen,
   toggleElabPromptKeywords,
   setPromptKeywords,
   handleSelectedPromptsChanged,
   initPrompts,
   setPrompts,
   setPromptStatus,
+  setCurRangeNodeKey,
+  setType,
+  setCurSelectedNodeKey,
 } from "../slices/EditorSlice";
-import { loadNodes, setSelectedPrompts } from "../slices/FlowSlice";
+import { loadNodes, setNodeSelected } from "../slices/FlowSlice";
 
 const Alert = forwardRef(function Alert(props, ref) {
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
@@ -62,6 +67,7 @@ const Alert = forwardRef(function Alert(props, ref) {
 export default function ElaborateFLoatingGroup({ editor }) {
   const buttonRef = useRef(null);
   const selectedPrompts = useSelector((state) => state.editor.selectedPrompts);
+  const curRangeNodeKey = useSelector((state) => state.editor.curRangeNodeKey);
   const selectedKeywords = useSelector(
     (state) => state.editor.selectedKeywords
   );
@@ -76,6 +82,7 @@ export default function ElaborateFLoatingGroup({ editor }) {
   const [fetchingAlertOpen, setFetchingAlertOpen] = useState(false);
   const [tabValue, setTabValue] = useState(0);
   const itemPerPage = 5;
+  const type = useSelector((state) => state.editor.type);
   const [page, setPage] = useState(1);
 
   const dispatch = useDispatch();
@@ -94,14 +101,23 @@ export default function ElaborateFLoatingGroup({ editor }) {
       return;
     }
 
+    let condition;
     const rootElement = editor.getRootElement();
-    if (
-      selection != null &&
+
+    if (type === "elaborate") {
+      condition = selection != null &&
       !nativeSelection.isCollapsed &&
       rootElement != null &&
       rootElement.contains(nativeSelection.anchorNode) &&
-      isElaborate
-    ) {
+      isElaborate;
+    } else if (type === "evidence") {
+      condition = selection != null &&
+      rootElement != null &&
+      rootElement.contains(nativeSelection.anchorNode) &&
+      isElaborate;
+    }
+
+    if (condition) {
       const domRange = nativeSelection.getRangeAt(0);
       let rect;
       if (nativeSelection.anchorNode === rootElement) {
@@ -127,16 +143,22 @@ export default function ElaborateFLoatingGroup({ editor }) {
   const fetchKeyword = () => {
     const selection = $getSelection();
     const selected_text = selection.getTextContent();
+    const nodes = selection.getNodes();
+    const node = nodes[0];
+    // console.log("Nodes:")
+    // console.log(nodes)
     setPromptedText(selected_text);
-    console.log(`fetching Keywords for: ${selected_text}`);
     const fetchPromise = fetch(
-      "http://localhost:8088/keyword?" +
+      "http://127.0.0.1:8088/keyword?" +
         new URLSearchParams({
           prompt: selected_text,
-          mode: "elaborate",
+          mode: type,
         }),
       {
         mode: "cors",
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+        },
       }
     );
 
@@ -151,17 +173,18 @@ export default function ElaborateFLoatingGroup({ editor }) {
       });
   };
 
-  const fetchPrompts = () => {
+  const fetchDiscussionPoints = () => {
     dispatch(setPromptStatus("fetching"));
     setFetchingAlertOpen(true);
 
-    // IP: http://34.172.42.28:8088
-    fetch("http://localhost:8088/prompts", {
+    // IP: http://127.0.0.1:8088
+    fetch("http://127.0.0.1:8088/prompts", {
       method: "POST",
       mode: "cors",
       headers: {
-        Accept: "application/json",
+        "Accept": "application/json",
         "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
       },
       body: JSON.stringify({
         keywords: selectedKeywords,
@@ -183,13 +206,13 @@ export default function ElaborateFLoatingGroup({ editor }) {
       console.log(`selection: ${selected_text}`);
 
       const fetchPromise = fetch(
-        "http://localhost:8088/?" +
+        "http://http://127.0.0.1:8088/?" +
           new URLSearchParams({
             prompt: selected_text,
             mode: "elaborate",
           }),
         {
-          mode: "cors",
+          mode: "no-cors",
         }
       );
 
@@ -201,8 +224,6 @@ export default function ElaborateFLoatingGroup({ editor }) {
           let text = res["response"].trim();
 
           editor.update(() => {
-            console.log(`gpt response: ${text}`);
-
             // replace \n with space
 
             text = text.replace(/\\n/g, " ");
@@ -240,7 +261,6 @@ export default function ElaborateFLoatingGroup({ editor }) {
     // console.log(`isElaborate changed: ${isElaborate}`)
     editor.getEditorState().read(() => {
       updateFloatingGroup();
-      console.log(`isElaborate after update: ${isElaborate}`);
     });
   }, [editor, isElaborate]);
 
@@ -253,8 +273,25 @@ export default function ElaborateFLoatingGroup({ editor }) {
       editor.registerCommand(
         ELABORATE_COMMAND,
         () => {
-          console.log(`ELABORATE_COMMAND listener is called`);
+          // console.log(`ELABORATE_COMMAND listener is called`);
           dispatch(initPrompts());
+          dispatch(setType("elaborate"));
+          setFetchingKeyword(true);
+          setElaborate(true);
+          fetchKeyword();
+          // console.log(`isElaborate: ${isElaborate}`)
+          // updateFloatingGroup();
+          return true;
+        },
+        lowPriority
+      ),
+
+      editor.registerCommand(
+        EVIDENCE_COMMAND,
+        () => {
+          console.log(`EVIDENCE_COMMAND listener is called`);
+          dispatch(initPrompts());
+          dispatch(setType("evidence"));
           setFetchingKeyword(true);
           setElaborate(true);
           fetchKeyword();
@@ -271,12 +308,15 @@ export default function ElaborateFLoatingGroup({ editor }) {
           const selection = $getSelection();
           setElaborate(false);
           setPromptedText(selection.getTextContent());
+          const selectedNodeKey = selection.getNodes()[0].__key;
+          dispatch(setCurRangeNodeKey(selectedNodeKey))
+          dispatch(setNodeSelected(selectedNodeKey))
           return false;
         },
-        lowPriority
+        highPriority
       )
     );
-  }, [editor]);
+  }, [editor, setCurSelectedNodeKey]);
 
   const onCLickElaboratePredict = () => {
     editor.update(() => {
@@ -310,20 +350,20 @@ export default function ElaborateFLoatingGroup({ editor }) {
     setFetchingAlertOpen(false);
   };
 
-  const handleChipDelete = (r) => {
-    console.log(r);
-    dispatch(toggleElabPromptKeywords(r));
-    if (page > Math.ceil(prompts.length / itemPerPage)) {
-      setPage(Math.max(Math.ceil(prompts.length / itemPerPage) - 1, 0));
-    }
-  };
+  // const handleChipDelete = (r) => {
+  //   console.log(r);
+  //   dispatch(toggleElabPromptKeywords(r));
+  //   if (page > Math.ceil(prompts.length / itemPerPage)) {
+  //     setPage(Math.max(Math.ceil(prompts.length / itemPerPage) - 1, 0));
+  //   }
+  // };
 
   const handleContentSketchingClicked = (e) => {
-    dispatch(loadNodes({ selectedText: promptedText, selectedKeywords: selectedKeywords , discussionPoints: selectedPrompts}));
-    dispatch(setModalOpen());
+    dispatch(loadNodes({ selectedText: promptedText, selectedKeywords: selectedKeywords , discussionPoints: selectedPrompts, curRangeNodeKey: curRangeNodeKey}));
+    dispatch(setFlowModalOpen());
+    positionFloatingButton(buttonRef.current, null);
+    dispatch(setPromptStatus("empty"))
   };
-
-  let promptView;
 
   return (
     <div ref={buttonRef} className="elaborate-group">
@@ -397,7 +437,7 @@ export default function ElaborateFLoatingGroup({ editor }) {
                   alignItems: "center",
                   mb: 2,
                 }}
-                onClick={() => fetchPrompts()}
+                onClick={() => fetchDiscussionPoints()}
               >
                 Generate discussion points
               </Button>
