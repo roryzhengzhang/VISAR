@@ -28,6 +28,7 @@ import WeaknessFloatGroup from "../widgets/WeaknessFloatGroup";
 import CounterArgumentMenu from "../widgets/CounterArgumentMenu";
 import SupportingEvidenceMenu from "../widgets/SupportingEvidenceMenu";
 import ControlConditionMenu from "../widgets/ControlConditionMenu";
+import { ArgumentativeMenu } from "../widgets/ArgumentativeMenu";
 
 export default function FloatingButtonPlugin() {
   const [editor] = useLexicalComposerContext();
@@ -59,13 +60,14 @@ export default function FloatingButtonPlugin() {
   return (
     <div ref={pluginRef}>
       {condition === "control" && createPortal(<ControlConditionMenu editor={editor} />, document.body)}
-      {condition === "full" && createPortal(<FloatingMenu editor={editor} />, document.body)}
-      {condition === "full" && createPortal(<ElaborateFLoatingGroup editor={editor} />, document.body)}
-      {condition === "full" && createPortal(<WeaknessFloatGroup editor={editor} />, document.body)}
-      {condition === "full" && createPortal(<TextBlockMenu editor={editor} />, document.body)}
-      {condition === "full" && createPortal(<RewriteMenu editor={editor} />, document.body)}
-      {condition === "full" && createPortal(<CounterArgumentMenu editor={editor} />, document.body)}
-      {condition === "full" && createPortal(<SupportingEvidenceMenu editor={editor} />, document.body)}
+      {condition === "advanced" && createPortal(<FloatingMenu editor={editor} />, document.body)}
+      {condition === "advanced" && createPortal(<ElaborateFLoatingGroup editor={editor} />, document.body)}
+      {condition === "advanced" && createPortal(<WeaknessFloatGroup editor={editor} />, document.body)}
+      {condition === "advanced" && createPortal(<TextBlockMenu editor={editor} />, document.body)}
+      {condition === "advanced" && createPortal(<RewriteMenu editor={editor} />, document.body)}
+      {condition === "advanced" && createPortal(<ArgumentativeMenu editor={editor} />, document.body)}
+      {condition === "advanced" && createPortal(<CounterArgumentMenu editor={editor} />, document.body)}
+      {condition === "advanced" && createPortal(<SupportingEvidenceMenu editor={editor} />, document.body)}
     </div>
   );
 }

@@ -95,7 +95,7 @@ export default function ControlConditionMenu ({ editor }) {
   const fetchGPTResposne = useCallback(nodeKey => {
     const prompt = $getNodeByKey(nodeKey).getTextContent()
     editor.dispatchCommand(SHOW_LOADING_COMMAND, {show: true})
-    fetch('http://127.0.0.1:8088/completion', {
+    fetch('http://34.70.132.79:8088/completion', {
       method: 'POST',
       mode: 'cors',
       headers: {
@@ -154,7 +154,7 @@ export default function ControlConditionMenu ({ editor }) {
           // set bottom border of the node to incidate it is selected
           if ($isHighlightDepNode(editorNode)) {
             editorNode.setStyle(
-              'border: dashed orange; background-color: #bde0fe;'
+              'border: dashed orange; background-color: #f9c74f;'
             )
           } else {
             editorNode.setStyle('border: dashed orange;')
@@ -162,7 +162,7 @@ export default function ControlConditionMenu ({ editor }) {
         } else {
           // remove bottom border
           if ($isHighlightDepNode(editorNode)) {
-            editorNode.setStyle('background-color: #bde0fe;')
+            editorNode.setStyle('background-color: #f9c74f;')
           } else {
             editorNode.setStyle('background-color: white;')
           }

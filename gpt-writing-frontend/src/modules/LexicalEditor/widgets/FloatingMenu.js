@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { addDependency, getDependencies } from '../neo4j'
 import { useDispatch, useSelector } from 'react-redux'
-import { positionFloatingButton, highlightDepText } from '../utils'
+import {
+  positionFloatingButton,
+  highlightDepText,
+  removeNode,
+  colorMapping
+} from '../utils'
 import {
   SELECTION_CHANGE_COMMAND,
   $getSelection,
@@ -14,7 +19,10 @@ import {
   $createRangeSelection,
   $getRoot,
   $createTextNode,
-  createCommand
+  createCommand,
+  KEY_BACKSPACE_COMMAND,
+  KEY_ENTER_COMMAND,
+  INSERT_LINE_BREAK_COMMAND
 } from 'lexical'
 import { mergeRegister } from '@lexical/utils'
 import {
@@ -22,17 +30,36 @@ import {
   ADD_EXAMPLE_COMMAND,
   SHOW_DEPENDENCY_COMMAND,
   ADD_TO_GRAPH_COMMAND,
-  lowPriority
+  lowPriority,
+  highPriority
 } from '../commands/SelfDefinedCommands'
-import { $createHighlightDepNode, $isHighlightDepNode } from '../nodes/HighlightDepNode'
-import { setCurRangeNodeKey } from '../slices/EditorSlice'
-import { addUserDefinedFlowNode, setNodeSelected } from '../slices/FlowSlice'
+import {
+  $createHighlightDepNode,
+  $isHighlightDepNode
+} from '../nodes/HighlightDepNode'
+import {
+  setCurRangeNodeKey,
+  setAddNodeModalOpen,
+  setCurSelection,
+  setCurSelectedNodeKey
+} from '../slices/EditorSlice'
+import {
+  addUserDefinedFlowNode,
+  setNodeSelected,
+  removeNodeFromDepGraph,
+  logInteractionData
+} from '../slices/FlowSlice'
 
 export function FloatingMenu ({ editor }) {
   const buttonRef = useRef(null)
   const dispatch = useDispatch()
+  const username = useSelector(state => state.editor.username)
+  const sessionId = useSelector(state => state.editor.sessionId)
   const nodeData = useSelector(state => state.flow.nodeData)
   const nodeMappings = useSelector(state => state.flow.flowEditorNodeMapping)
+  const dependencyGraph = useSelector(state => state.flow.dependencyGraph)
+  const curClickedNodeKey = useSelector(state => state.editor.curClickedNodeKey)
+
   const showDependencies = useCallback(() => {
     const selection = $getSelection()
 
@@ -99,18 +126,39 @@ export function FloatingMenu ({ editor }) {
       }),
 
       editor.registerCommand(
+        KEY_ENTER_COMMAND,
+        event => {
+          const curClickeddNode = $getNodeByKey(curClickedNodeKey)
+          if (
+            curClickedNodeKey !== '' &&
+            $isHighlightDepNode(curClickeddNode)
+          ) {
+            editor.setEditable(false)
+            return true
+          }
+
+          console.log(
+            '[KEY_ENTER_COMMAND] curSelectedNodeKey: ',
+            curClickedNodeKey
+          )
+
+          return false
+        },
+        highPriority
+      ),
+
+      editor.registerCommand(
+        INSERT_LINE_BREAK_COMMAND,
+        () => {
+          console.log('INSERT_LINE_BREAK_COMMAND was called')
+        },
+        lowPriority
+      ),
+
+      editor.registerCommand(
         ADD_TO_GRAPH_COMMAND,
         () => {
-          const selection = $getSelection()
-          const selectedText = selection.getTextContent()
-          const node = selection.getNodes()[0]
-          const curRangeNodeKey = node.__key
-          dispatch(
-            addUserDefinedFlowNode({
-              editorNodeKey: curRangeNodeKey,
-              selectedText: selectedText
-            })
-          )
+          dispatch(setAddNodeModalOpen())
           return true
         },
         lowPriority
@@ -136,29 +184,89 @@ export function FloatingMenu ({ editor }) {
         lowPriority
       )
     )
-  }, [editor, updateFloatingButton])
+  }, [editor, updateFloatingButton, curClickedNodeKey])
 
   useEffect(() => {
     editor.update(() => {
       for (const [key, value] of Object.entries(nodeMappings)) {
         const SelectedEditorNodeKey = nodeMappings[key]
         const editorNode = $getNodeByKey(SelectedEditorNodeKey)
+        const depData = dependencyGraph[key]
         if (editorNode == null) {
           continue
         }
         const flowNode = nodeData[key]
+        console.log("curNode['type']: ", depData['type'])
         if (flowNode.selected === true) {
           // set bottom border of the node to incidate it is selected
-          if ($isHighlightDepNode(editorNode)) {
-            editorNode.setStyle('border: dashed orange; background-color: #bde0fe;')
+          if (
+            $isHighlightDepNode(editorNode) &&
+            depData['userEntered'] === true
+          ) {
+            editorNode.setStyle(
+              'border: dashed green; background-color: #bde0fe;'
+            )
+          } else if ($isHighlightDepNode(editorNode)) {
+            if (depData['type'] === 'root') {
+              editorNode.setStyle(
+                `border: dashed green; background-color: ${colorMapping['root']};`
+              )
+            } else if (depData['type'] === 'featuredBy') {
+              editorNode.setStyle(
+                `border: dashed green; background-color: ${colorMapping['featuredBy']};`
+              )
+            } else if (depData['type'] === 'elaboratedBy') {
+              editorNode.setStyle(
+                `border: dashed green; background-color: ${colorMapping['elaboratedBy']};`
+              )
+            } else if (depData['type'] === 'attackedBy') {
+              editorNode.setStyle(
+                `border: dashed green; background-color: ${colorMapping['attackedBy']};`
+              )
+            } else if (depData['type'] === 'supportedBy') {
+              editorNode.setStyle(
+                `border: dashed green; background-color: ${colorMapping['supportedBy']};`
+              )
+            } else {
+              editorNode.setStyle(
+                `border: dashed green; background-color:  #f9c74f;`
+              )
+            }
           } else {
-            editorNode.setStyle('border: dashed orange;')
+            console.log(`editorNode ${SelectedEditorNodeKey} is not a hl node`)
+            editorNode.setStyle('border: dashed green;')
           }
         } else {
           // remove bottom border
-          if ($isHighlightDepNode(editorNode)) {
+          if (
+            $isHighlightDepNode(editorNode) &&
+            depData['userEntered'] === true
+          ) {
             editorNode.setStyle('background-color: #bde0fe;')
+          } else if ($isHighlightDepNode(editorNode)) {
+            if (depData['type'] === 'root') {
+              editorNode.setStyle(`background-color: ${colorMapping['root']};`)
+            } else if (depData['type'] === 'featuredBy') {
+              editorNode.setStyle(
+                `background-color: ${colorMapping['featuredBy']};`
+              )
+            } else if (depData['type'] === 'elaboratedBy') {
+              editorNode.setStyle(
+                `background-color: ${colorMapping['elaboratedBy']};`
+              )
+            } else if (depData['type'] === 'attackedBy') {
+              editorNode.setStyle(
+                `background-color: ${colorMapping['attackedBy']};`
+              )
+            } else if (depData['type'] === 'supportedBy') {
+              editorNode.setStyle(
+                `background-color: ${colorMapping['supportedBy']};`
+              )
+            } else {
+              editorNode.setStyle(`background-color:  #f9c74f;`)
+            }
           } else {
+            console.log(`editorNode ${SelectedEditorNodeKey} is not a hl node`)
             editorNode.setStyle('background-color: white;')
           }
         }
@@ -183,10 +291,23 @@ export function FloatingMenu ({ editor }) {
             const curRangeNodeKey = node.getKey()
             dispatch(setCurRangeNodeKey(curRangeNodeKey))
             dispatch(setNodeSelected(curRangeNodeKey))
-          })
+            dispatch(setCurSelection(selection.getTextContent()))
 
-          editor.dispatchCommand(ELABORATE_COMMAND, null)
-          positionFloatingButton(buttonRef.current, null)
+            editor.dispatchCommand(ELABORATE_COMMAND, null)
+            positionFloatingButton(buttonRef.current, null)
+
+            dispatch(
+              logInteractionData({
+                username: username,
+                sessionId: sessionId,
+                type: 'elaborate',
+                interactionData: {
+                  textNodeKey: curRangeNodeKey,
+                  content: selection.getTextContent()
+                }
+              })
+            )
+          })
         }}
       >
         Elaborate

@@ -46,7 +46,7 @@ export default function PromptModal() {
         aria-describedby="modal-modal-description"
       >
         <ReactFlowProvider>
-          <Flow editor={editor} mode="modal" sidebar={true} />
+          <Flow editor={editor} mode="modal"  sidebar={true} />
         </ReactFlowProvider>
       </Modal>
     </div>

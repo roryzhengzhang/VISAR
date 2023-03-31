@@ -21,14 +21,16 @@ const initialState = {
   dataFetched: false,
   backendResponse: null,
   edgeData: {},
+  dependentsOfModifiedNodes: [],
   curModifiedFlowNodeKey: null,
+  isLazyUpdate: false,
   // record the mapping between lexical node and flow node
   avatarColors: {
-    K: pink[200],
-    A: cyan[200],
-    DP: amber[300],
-    CA: teal[200],
-    S: purple[200]
+    K: '#e2afff',
+    A: '#bde0fe',
+    DP: '#ffd60a',
+    CA: '#ff758f',
+    S: '#83c5be'
   },
   finalKeywords: [],
   dependencyGraph: {}
@@ -41,6 +43,28 @@ export const NodeEdgeTypeMapping = {
   supportedBy: 'Supported By'
 }
 
+export const logInteractionData = createAsyncThunk(
+  'flow/logInteractionData',
+  async (args, { getState }) => {
+
+    const res = await fetch('http://34.70.132.79:8088/logInteractionData', {
+      method: 'POST',
+      mode: 'cors',
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      },
+      body: JSON.stringify({
+        username: args.username,
+        sessionId: args.sessionId,
+        type: args.type,
+        interactionData: args.interactionData
+      })
+    })
+  }
+)
+
 export const generateFromDepGraph = createAsyncThunk(
   'flow/generateFromDepGraph',
   async (args, { getState }) => {
@@ -51,24 +75,23 @@ export const generateFromDepGraph = createAsyncThunk(
     const dependencyGraph = JSON.parse(
       JSON.stringify(state.flow.dependencyGraph)
     )
-    let rootKey = null
+    let rootKeys = []
 
     // Assume there is an unique root of the dependency graph, fetch the root key
     for (const [key, value] of Object.entries(dependencyGraph)) {
       if (value['type'] === 'root') {
-        rootKey = key
-        break
+        rootKeys.push(key)
       }
     }
 
-    if (rootKey === null) {
+    if (rootKeys.length === 0) {
       console.log('[generateFromDepGraph] rootKey is null')
       return {
         res: state.flow.dependencyGraph
       }
     }
 
-    const res = await fetch('http://127.0.0.1:8088/generateFromDepGraph', {
+    const res = await fetch('http://34.70.132.79:8088/generateFromDepGraph', {
       method: 'POST',
       mode: 'cors',
       headers: {
@@ -78,7 +101,7 @@ export const generateFromDepGraph = createAsyncThunk(
       },
       body: JSON.stringify({
         dependencyGraph: dependencyGraph,
-        rootKey: rootKey
+        rootKeys: rootKeys
       })
     }).then(res => res.json())
 
@@ -86,7 +109,7 @@ export const generateFromDepGraph = createAsyncThunk(
 
     return {
       depGraph: res['depGraph'],
-      rootFlowKey: rootKey,
+      rootFlowKeys: rootKeys,
       nodeMappings: flowEditorNodeMapping
     }
   }
@@ -97,7 +120,7 @@ export const generateFromSketch = createAsyncThunk(
   async (editor, { getState }) => {
     const state = getState()
 
-    const res = await fetch('http://127.0.0.1:8088/generateFromSketch', {
+    const res = await fetch('http://34.70.132.79:8088/generateFromSketch', {
       method: 'POST',
       mode: 'cors',
       headers: {
@@ -225,14 +248,44 @@ const flowSlice = createSlice({
         selectedPrompts: prompts
       }
     },
+    setIsLazyUpdate (state, action) {
+      return {
+        ...state,
+        isLazyUpdate: action.payload
+      }
+    },
     removeNodeFromDepGraph (state, action) {
       let dependencyGraph = JSON.parse(JSON.stringify(state.dependencyGraph))
+      let nodeMappings = JSON.parse(JSON.stringify(state.flowEditorNodeMapping))
       const delNodeKey = action.payload
-      delete dependencyGraph[delNodeKey]
+      console.log("[removeNode] depGraph: ", dependencyGraph)
+      console.log("[removeNode] delNodeKey", delNodeKey)
+
+      if (dependencyGraph[delNodeKey] !== undefined) {
+        const parent = dependencyGraph[delNodeKey]['parent']
+
+        if (parent !== null && parent !== undefined) {
+          const index = dependencyGraph[parent]['children'].indexOf(delNodeKey)
+          dependencyGraph[parent]['children'].splice(index, 1)
+        }
+  
+        dependencyGraph[delNodeKey]['children'].forEach( child => {
+          if (dependencyGraph[child] !== undefined) {
+            delete dependencyGraph[child]
+          }
+          if (nodeMappings[child] !== undefined) {
+            delete nodeMappings[child]
+          }
+        })
+  
+        console.log("removeNodeFromDepGraph is called, del key: ", delNodeKey)
+        delete dependencyGraph[delNodeKey]
+      }
 
       return {
         ...state,
-        dependencyGraph: dependencyGraph
+        dependencyGraph: dependencyGraph,
+        flowEditorNodeMapping: nodeMappings
       }
     },
     setCurModifiedFlowNodeKey (state, action) {
@@ -242,9 +295,20 @@ const flowSlice = createSlice({
         curModifiedFlowNodeKey: nodeKey
       }
     },
+    setDependentsOfModifiedNodes (state, action) {
+      const dependents = action.payload
+      return {
+        ...state,
+        dependentsOfModifiedNodes: dependents
+      }
+    },
     setFlowEditorNodeMapping (state, action) {
       const mappings = JSON.parse(JSON.stringify(state.flowEditorNodeMapping))
       const { flowKey, EditorKey } = action.payload
+
+      console.log(
+        `[setFlowEditorNodeMapping] flowKey: ${flowKey}, EditorKey: ${EditorKey}`
+      )
 
       mappings[flowKey] = EditorKey
       return {
@@ -257,6 +321,12 @@ const flowSlice = createSlice({
       const { nodeKey, attribute, value } = action.payload
       if (depGraph[nodeKey] !== undefined) {
         depGraph[nodeKey][attribute] = value
+        console.log(
+          `[setDepGraphNodeAttribute] nodeKey ${nodeKey} updated:`,
+          depGraph[nodeKey]
+        )
+      } else {
+        console.log(`[setDepGraphNodeAttribute] nodeKey ${nodeKey} not found`)
       }
 
       return {
@@ -310,6 +380,22 @@ const flowSlice = createSlice({
       const { id, data } = action.payload
       state.edgeData[id] = data
     },
+    setNodeSelectedUsingFlowKey: (state, action) => {
+      const flowKey = action.payload
+      const nodeData = JSON.parse(JSON.stringify(state.nodeData))
+      for (const [key, value] of Object.entries(nodeData)) {
+        if (key === flowKey) {
+          value.selected = true
+        } else {
+          value.selected = false
+        }
+      }
+
+      return {
+        ...state,
+        nodeData: nodeData
+      }
+    },
     setNodeSelected: (state, action) => {
       const nodeKey = action.payload
 
@@ -336,7 +422,7 @@ const flowSlice = createSlice({
       }
     },
     addUserDefinedFlowNode (state, action) {
-      const { editorNodeKey, selectedText } = action.payload
+      const { editorNodeKey, selectedText, prompt } = action.payload
       const node_width = 300
       const node_height = 100
       const maxWidth = 500
@@ -356,12 +442,12 @@ const flowSlice = createSlice({
 
       depGrpah[id] = {
         type: 'root',
-        prompt: '',
+        prompt: prompt,
         isImplemented: false,
         parent: null,
         children: [],
         text: text,
-        userEntered: true,
+        userEntered: false,
         needsUpdate: false
       }
 
@@ -383,6 +469,12 @@ const flowSlice = createSlice({
 
       if (editorNodeKey !== null) {
         mappings[id] = editorNodeKey
+        console.log(
+          '[addUserDefinedFlowNode] flowKey: ',
+          id,
+          ' editorNodeKey: ',
+          editorNodeKey
+        )
       } else {
         mappings[id] = undefined
       }
@@ -400,6 +492,8 @@ const flowSlice = createSlice({
       const nodeData = JSON.parse(JSON.stringify(state.nodeData))
       if (nodeData[nodeKey] !== undefined) {
         nodeData[nodeKey][attribute] = value
+      } else {
+        console.log('nodeData is undefined')
       }
       return {
         ...state,
@@ -540,8 +634,8 @@ const flowSlice = createSlice({
         discussionPoints,
         curRangeNodeKey
       } = action.payload
-      let new_nodes = []
-      let new_edges = []
+      let new_nodes = [...state.nodes]
+      let new_edges = [...state.edges]
       const node_width = 300
       const node_height = 100
       const maxWidth = 500
@@ -551,8 +645,8 @@ const flowSlice = createSlice({
         JSON.stringify(state.flowEditorNodeMapping)
       )
 
-      let nodeData = { ...state.nodeData }
-      let edgeData = { ...state.edgeData }
+      let nodeData = JSON.parse(JSON.stringify(state.nodeData))
+      let edgeData = JSON.parse(JSON.stringify(state.edgeData))
 
       let keyPointMappings = {}
       selectedKeywords.map((k, index) => {
@@ -792,9 +886,13 @@ export const {
   extendDepGraph,
   removeNodeFromDepGraph,
   setNodeSelected,
+  setFlowEditorNodeMapping,
   setDepGraphNodeAttribute,
   setNodeDataAttribute,
-  setCurModifiedFlowNodeKey
+  setNodeSelectedUsingFlowKey,
+  setCurModifiedFlowNodeKey,
+  setDependentsOfModifiedNodes,
+  setIsLazyUpdate
 } = flowSlice.actions
 
 export default flowSlice.reducer

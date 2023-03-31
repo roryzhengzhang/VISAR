@@ -23,10 +23,10 @@ export class HighlightDepNode extends TextNode {
     return new HighlightDepNode(node.__text, node.__key)
   }
 
-  constructor (text: string, hl_type, prompt, key?: NodeKey) {
+  constructor (text: string, hl_type, key?: NodeKey) {
     super(text, key)
     this.__hl_type = hl_type
-    this.__prompt = prompt
+    // this.__prompt = prompt
   }
 
   getKey() {
@@ -35,7 +35,7 @@ export class HighlightDepNode extends TextNode {
 
   createDOM (config: EditorConfig): HTMLElement {
     const element = super.createDOM(config)
-    this.__element = element
+    // this.__element = element
     addClassNamesToElement(element, this.__hl_type)
     return element
   }
@@ -64,7 +64,7 @@ export class HighlightDepNode extends TextNode {
   }
 
   static importJSON (serializedNode: SerializedTextNode): HighlightDepNode {
-    const node = $createHighlightDepNode(serializedNode.text)
+    const node = $createHighlightDepNode('highlight-dep-elb', serializedNode.text, serializedNode.key)
     node.setFormat(serializedNode.format)
     node.setDetail(serializedNode.detail)
     node.setMode(serializedNode.mode)
@@ -75,7 +75,8 @@ export class HighlightDepNode extends TextNode {
   exportJSON (): SerializedTextNode {
     return {
       ...super.exportJSON(),
-      type: 'hl-type'
+      type: 'hl-text',
+      version: 1,
     }
   }
 
@@ -84,7 +85,7 @@ export class HighlightDepNode extends TextNode {
   }
 
   canInsertTextAfter (): boolean {
-    return false
+    return true
   }
 
   isTextEntity (): true {
@@ -92,8 +93,13 @@ export class HighlightDepNode extends TextNode {
   }
 }
 
-export function $createHighlightDepNode (hl_type, text = '', prompt = ''): HighlightDepNode {
-  return $applyNodeReplacement(new HighlightDepNode(text, hl_type, prompt))
+export function $createHighlightDepNode (hl_type, text = '', key = ''): HighlightDepNode {
+  if (key !== '') {
+    return new $applyNodeReplacement(HighlightDepNode(text, hl_type, key))
+  } else {
+    return $applyNodeReplacement(new HighlightDepNode(text, hl_type))
+  }
+  
 }
 
 export function $isHighlightDepNode (node: LexicalNode | null | undefined) {

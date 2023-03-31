@@ -18,7 +18,8 @@ import {
 import { SHOW_LOADING_COMMAND } from './commands/SelfDefinedCommands'
 import { $createHighlightDepNode } from './nodes/HighlightDepNode'
 import { useDispatch } from 'react-redux'
-import { $createTextBlockNode } from './nodes/TextBlockNode'
+import { $createTextBlockNode, $isTextBlockNode } from './nodes/TextBlockNode'
+import { cyan, teal, pink, amber, blue, purple } from '@mui/material/colors'
 
 function randomizeBGColor () {
   const colors = [
@@ -29,11 +30,19 @@ function randomizeBGColor () {
     '#ffc300',
     '#d6e2e9',
     '#ffb3c1',
-    '#bde0fe'
+    '#f9c74f'
   ]
   const id = Math.floor(Math.random() * colors.length)
 
-  return '#bde0fe'
+  return '#ffb3c1'
+}
+
+export const colorMapping = {
+  attackedBy: '#ff758f',
+  elaboratedBy: '#ffd60a',
+  featuredBy: '#e2afff',
+  supportedBy: '#83c5be',
+  root: '#bde0fe'
 }
 
 export function positionFloatingButton (buttonGroup, rect) {
@@ -56,202 +65,198 @@ export function positionFloatingButton (buttonGroup, rect) {
   }
 }
 
-export function $maybeMoveChildrenSelectionToParent(
-  parentNode,
-  offset = 0,
-) {
+export function $maybeMoveChildrenSelectionToParent (parentNode, offset = 0) {
   if (offset !== 0) {
-    
   }
-  const selection = $getSelection();
+  const selection = $getSelection()
   if (!$isRangeSelection(selection) || !$isElementNode(parentNode)) {
-    return selection;
+    return selection
   }
-  const {anchor, focus} = selection;
-  const anchorNode = anchor.getNode();
-  const focusNode = focus.getNode();
+  const { anchor, focus } = selection
+  const anchorNode = anchor.getNode()
+  const focusNode = focus.getNode()
   if ($hasAncestor(anchorNode, parentNode)) {
-    anchor.set(parentNode.__key, 0, 'element');
+    anchor.set(parentNode.__key, 0, 'element')
   }
   if ($hasAncestor(focusNode, parentNode)) {
-    focus.set(parentNode.__key, 0, 'element');
+    focus.set(parentNode.__key, 0, 'element')
   }
-  return selection;
+  return selection
 }
 
-export function moveSelectionPointToSibling(
+export function moveSelectionPointToSibling (
   point,
   node,
   parent,
   prevSibling,
-  nextSibling,
+  nextSibling
 ) {
-  let siblingKey = null;
-  let offset = 0;
-  let type = null;
+  let siblingKey = null
+  let offset = 0
+  let type = null
   if (prevSibling !== null) {
-    siblingKey = prevSibling.__key;
+    siblingKey = prevSibling.__key
     if ($isTextNode(prevSibling)) {
-      offset = prevSibling.getTextContentSize();
-      type = 'text';
+      offset = prevSibling.getTextContentSize()
+      type = 'text'
     } else if ($isElementNode(prevSibling)) {
-      offset = prevSibling.getChildrenSize();
-      type = 'element';
+      offset = prevSibling.getChildrenSize()
+      type = 'element'
     }
   } else {
     if (nextSibling !== null) {
-      siblingKey = nextSibling.__key;
+      siblingKey = nextSibling.__key
       if ($isTextNode(nextSibling)) {
-        type = 'text';
+        type = 'text'
       } else if ($isElementNode(nextSibling)) {
-        type = 'element';
+        type = 'element'
       }
     }
   }
   if (siblingKey !== null && type !== null) {
-    point.set(siblingKey, offset, type);
+    point.set(siblingKey, offset, type)
   } else {
-    offset = node.getIndexWithinParent();
+    offset = node.getIndexWithinParent()
     if (offset === -1) {
       // Move selection to end of parent
-      offset = parent.getChildrenSize();
+      offset = parent.getChildrenSize()
     }
-    point.set(parent.__key, offset, 'element');
+    point.set(parent.__key, offset, 'element')
   }
 }
-export function $updateElementSelectionOnCreateDeleteNode(
+export function $updateElementSelectionOnCreateDeleteNode (
   selection,
   parentNode,
   nodeOffset,
-  times = 1,
+  times = 1
 ) {
-  const anchor = selection.anchor;
-  const focus = selection.focus;
-  const anchorNode = anchor.getNode();
-  const focusNode = focus.getNode();
+  const anchor = selection.anchor
+  const focus = selection.focus
+  const anchorNode = anchor.getNode()
+  const focusNode = focus.getNode()
   if (!parentNode.is(anchorNode) && !parentNode.is(focusNode)) {
-    return;
+    return
   }
-  const parentKey = parentNode.__key;
+  const parentKey = parentNode.__key
   // Single node. We shift selection but never redimension it
   if (selection.isCollapsed()) {
-    const selectionOffset = anchor.offset;
+    const selectionOffset = anchor.offset
     if (nodeOffset <= selectionOffset) {
-      const newSelectionOffset = Math.max(0, selectionOffset + times);
-      anchor.set(parentKey, newSelectionOffset, 'element');
-      focus.set(parentKey, newSelectionOffset, 'element');
+      const newSelectionOffset = Math.max(0, selectionOffset + times)
+      anchor.set(parentKey, newSelectionOffset, 'element')
+      focus.set(parentKey, newSelectionOffset, 'element')
       // The new selection might point to text nodes, try to resolve them
-      $updateSelectionResolveTextNodes(selection);
+      $updateSelectionResolveTextNodes(selection)
     }
-    return;
+    return
   }
   // Multiple nodes selected. We shift or redimension selection
-  const isBackward = selection.isBackward();
-  const firstPoint = isBackward ? focus : anchor;
-  const firstPointNode = firstPoint.getNode();
-  const lastPoint = isBackward ? anchor : focus;
-  const lastPointNode = lastPoint.getNode();
+  const isBackward = selection.isBackward()
+  const firstPoint = isBackward ? focus : anchor
+  const firstPointNode = firstPoint.getNode()
+  const lastPoint = isBackward ? anchor : focus
+  const lastPointNode = lastPoint.getNode()
   if (parentNode.is(firstPointNode)) {
-    const firstPointOffset = firstPoint.offset;
+    const firstPointOffset = firstPoint.offset
     if (nodeOffset <= firstPointOffset) {
       firstPoint.set(
         parentKey,
         Math.max(0, firstPointOffset + times),
-        'element',
-      );
+        'element'
+      )
     }
   }
   if (parentNode.is(lastPointNode)) {
-    const lastPointOffset = lastPoint.offset;
+    const lastPointOffset = lastPoint.offset
     if (nodeOffset <= lastPointOffset) {
-      lastPoint.set(parentKey, Math.max(0, lastPointOffset + times), 'element');
+      lastPoint.set(parentKey, Math.max(0, lastPointOffset + times), 'element')
     }
   }
   // The new selection might point to text nodes, try to resolve them
-  $updateSelectionResolveTextNodes(selection);
+  $updateSelectionResolveTextNodes(selection)
 }
 
-function $updateSelectionResolveTextNodes(selection) {
-  const anchor = selection.anchor;
-  const anchorOffset = anchor.offset;
-  const focus = selection.focus;
-  const focusOffset = focus.offset;
-  const anchorNode = anchor.getNode();
-  const focusNode = focus.getNode();
+function $updateSelectionResolveTextNodes (selection) {
+  const anchor = selection.anchor
+  const anchorOffset = anchor.offset
+  const focus = selection.focus
+  const focusOffset = focus.offset
+  const anchorNode = anchor.getNode()
+  const focusNode = focus.getNode()
   if (selection.isCollapsed()) {
     if (!$isElementNode(anchorNode)) {
-      return;
+      return
     }
-    const childSize = anchorNode.getChildrenSize();
-    const anchorOffsetAtEnd = anchorOffset >= childSize;
+    const childSize = anchorNode.getChildrenSize()
+    const anchorOffsetAtEnd = anchorOffset >= childSize
     const child = anchorOffsetAtEnd
       ? anchorNode.getChildAtIndex(childSize - 1)
-      : anchorNode.getChildAtIndex(anchorOffset);
+      : anchorNode.getChildAtIndex(anchorOffset)
     if ($isTextNode(child)) {
-      let newOffset = 0;
+      let newOffset = 0
       if (anchorOffsetAtEnd) {
-        newOffset = child.getTextContentSize();
+        newOffset = child.getTextContentSize()
       }
-      anchor.set(child.__key, newOffset, 'text');
-      focus.set(child.__key, newOffset, 'text');
+      anchor.set(child.__key, newOffset, 'text')
+      focus.set(child.__key, newOffset, 'text')
     }
-    return;
+    return
   }
   if ($isElementNode(anchorNode)) {
-    const childSize = anchorNode.getChildrenSize();
-    const anchorOffsetAtEnd = anchorOffset >= childSize;
+    const childSize = anchorNode.getChildrenSize()
+    const anchorOffsetAtEnd = anchorOffset >= childSize
     const child = anchorOffsetAtEnd
       ? anchorNode.getChildAtIndex(childSize - 1)
-      : anchorNode.getChildAtIndex(anchorOffset);
+      : anchorNode.getChildAtIndex(anchorOffset)
     if ($isTextNode(child)) {
-      let newOffset = 0;
+      let newOffset = 0
       if (anchorOffsetAtEnd) {
-        newOffset = child.getTextContentSize();
+        newOffset = child.getTextContentSize()
       }
-      anchor.set(child.__key, newOffset, 'text');
+      anchor.set(child.__key, newOffset, 'text')
     }
   }
   if ($isElementNode(focusNode)) {
-    const childSize = focusNode.getChildrenSize();
-    const focusOffsetAtEnd = focusOffset >= childSize;
+    const childSize = focusNode.getChildrenSize()
+    const focusOffsetAtEnd = focusOffset >= childSize
     const child = focusOffsetAtEnd
       ? focusNode.getChildAtIndex(childSize - 1)
-      : focusNode.getChildAtIndex(focusOffset);
+      : focusNode.getChildAtIndex(focusOffset)
     if ($isTextNode(child)) {
-      let newOffset = 0;
+      let newOffset = 0
       if (focusOffsetAtEnd) {
-        newOffset = child.getTextContentSize();
+        newOffset = child.getTextContentSize()
       }
-      focus.set(child.__key, newOffset, 'text');
+      focus.set(child.__key, newOffset, 'text')
     }
   }
 }
 
-export function removeNode(
+export function removeNode (
   nodeToRemove,
   restoreSelection = true,
-  preserveEmptyParent = false,
+  preserveEmptyParent = false
 ) {
   // errorOnReadOnly();
-  const key = nodeToRemove.__key;
-  const parent = nodeToRemove.getParent();
+  const key = nodeToRemove.__key
+  const parent = nodeToRemove.getParent()
   if (parent === null) {
-    return;
+    return
   }
-  const selection = $maybeMoveChildrenSelectionToParent(nodeToRemove);
-  let selectionMoved = false;
+  const selection = $maybeMoveChildrenSelectionToParent(nodeToRemove)
+  let selectionMoved = false
   if ($isRangeSelection(selection) && restoreSelection) {
-    const anchor = selection.anchor;
-    const focus = selection.focus;
+    const anchor = selection.anchor
+    const focus = selection.focus
     if (anchor.key === key) {
       moveSelectionPointToSibling(
         anchor,
         nodeToRemove,
         parent,
         nodeToRemove.getPreviousSibling(),
-        nodeToRemove.getNextSibling(),
-      );
-      selectionMoved = true;
+        nodeToRemove.getNextSibling()
+      )
+      selectionMoved = true
     }
     if (focus.key === key) {
       moveSelectionPointToSibling(
@@ -259,19 +264,19 @@ export function removeNode(
         nodeToRemove,
         parent,
         nodeToRemove.getPreviousSibling(),
-        nodeToRemove.getNextSibling(),
-      );
-      selectionMoved = true;
+        nodeToRemove.getNextSibling()
+      )
+      selectionMoved = true
     }
   }
 
   if ($isRangeSelection(selection) && restoreSelection && !selectionMoved) {
     // Doing this is O(n) so lets avoid it unless we need to do it
-    const index = nodeToRemove.getIndexWithinParent();
-    removeFromParent(nodeToRemove);
-    $updateElementSelectionOnCreateDeleteNode(selection, parent, index, -1);
+    const index = nodeToRemove.getIndexWithinParent()
+    removeFromParent(nodeToRemove)
+    $updateElementSelectionOnCreateDeleteNode(selection, parent, index, -1)
   } else {
-    removeFromParent(nodeToRemove);
+    removeFromParent(nodeToRemove)
   }
 
   if (
@@ -280,13 +285,12 @@ export function removeNode(
     !parent.canBeEmpty() &&
     parent.isEmpty()
   ) {
-    removeNode(parent, restoreSelection);
+    removeNode(parent, restoreSelection)
   }
   if (restoreSelection && $isRootNode(parent) && parent.isEmpty()) {
-    parent.selectEnd();
+    parent.selectEnd()
   }
 }
-
 
 export function positionTextBlockMenu (buttonGroup, loc) {
   if (loc === null) {
@@ -310,77 +314,227 @@ export function selectTextNodeByKey (editor, nodeKey) {
   })
 }
 
-export function removeFromParent(node) {
-  const oldParent = node.getParent();
+export function removeFromParent (node) {
+  const oldParent = node.getParent()
   if (oldParent !== null) {
-    const writableNode = node.getWritable();
-    const writableParent = oldParent.getWritable();
-    const prevSibling = node.getPreviousSibling();
-    const nextSibling = node.getNextSibling();
+    const writableNode = node.getWritable()
+    const writableParent = oldParent.getWritable()
+    const prevSibling = node.getPreviousSibling()
+    const nextSibling = node.getNextSibling()
     // TODO: this function duplicates a bunch of operations, can be simplified.
     if (prevSibling === null) {
       if (nextSibling !== null) {
-        const writableNextSibling = nextSibling.getWritable();
-        writableParent.__first = nextSibling.__key;
-        writableNextSibling.__prev = null;
+        const writableNextSibling = nextSibling.getWritable()
+        writableParent.__first = nextSibling.__key
+        writableNextSibling.__prev = null
       } else {
-        writableParent.__first = null;
+        writableParent.__first = null
       }
     } else {
-      const writablePrevSibling = prevSibling.getWritable();
+      const writablePrevSibling = prevSibling.getWritable()
       if (nextSibling !== null) {
-        const writableNextSibling = nextSibling.getWritable();
-        writableNextSibling.__prev = writablePrevSibling.__key;
-        writablePrevSibling.__next = writableNextSibling.__key;
+        const writableNextSibling = nextSibling.getWritable()
+        writableNextSibling.__prev = writablePrevSibling.__key
+        writablePrevSibling.__next = writableNextSibling.__key
       } else {
-        writablePrevSibling.__next = null;
+        writablePrevSibling.__next = null
       }
-      writableNode.__prev = null;
+      writableNode.__prev = null
     }
     if (nextSibling === null) {
       if (prevSibling !== null) {
-        const writablePrevSibling = prevSibling.getWritable();
-        writableParent.__last = prevSibling.__key;
-        writablePrevSibling.__next = null;
+        const writablePrevSibling = prevSibling.getWritable()
+        writableParent.__last = prevSibling.__key
+        writablePrevSibling.__next = null
       } else {
-        writableParent.__last = null;
+        writableParent.__last = null
       }
     } else {
-      const writableNextSibling = nextSibling.getWritable();
+      const writableNextSibling = nextSibling.getWritable()
       if (prevSibling !== null) {
-        const writablePrevSibling = prevSibling.getWritable();
-        writablePrevSibling.__next = writableNextSibling.__key;
-        writableNextSibling.__prev = writablePrevSibling.__key;
+        const writablePrevSibling = prevSibling.getWritable()
+        writablePrevSibling.__next = writableNextSibling.__key
+        writableNextSibling.__prev = writablePrevSibling.__key
       } else {
-        writableNextSibling.__prev = null;
+        writableNextSibling.__prev = null
       }
-      writableNode.__next = null;
+      writableNode.__next = null
     }
-    writableParent.__size--;
-    writableNode.__parent = null;
+    writableParent.__size--
+    writableNode.__parent = null
   }
+}
+
+export function DFS (stateDepGraph, curNodeKey, stateNodeMappings, visited) {
+  let nodeMappings = JSON.parse(JSON.stringify(stateNodeMappings))
+  let depGraph = JSON.parse(JSON.stringify(stateDepGraph))
+
+  visited.push(curNodeKey)
+
+  const curNode = depGraph[curNodeKey]
+
+  if (!(curNodeKey in Object.keys(nodeMappings)) && !curNode['isImplemented']) {
+    // Only add lexical node when the corrresponding flow node is not implemented in the editor (which means it is newly added)
+
+    // console.log(nodeMappings)
+    // console.log('curNode parent: ', curNode['parent'])
+    let parentNode = null
+    if (curNode['type'] !== 'root') {
+      parentNode = $getNodeByKey(nodeMappings[curNode['parent']])
+      // console.log('parent key: ', nodeMappings[curNode['parent']])
+      if (parentNode === undefined) {
+        console.log('Cannot found parent node in editor')
+        return
+      }
+    }
+
+    const hlNode = $createHighlightDepNode('highlight-dep-elb', curNode['text'])
+    // hlNode.setStyle(`background-color: ${randomizeBGColor()}`)
+
+    const textBlockNode = $createTextBlockNode()
+
+    switch (curNode['type']) {
+      case 'featuredBy':
+
+        // get parent node
+        hlNode.setStyle(`background-color: ${colorMapping['featuredBy']}`)
+        textBlockNode.append(hlNode)
+        textBlockNode.append($createTextNode('  '))
+        if ($isTextNode(parentNode)) {
+          parentNode.insertAfter(textBlockNode)
+          // textBlockNode.append($createTextNode('123'))
+        } else {
+          parentNode.append(textBlockNode)
+          parentNode.append($createTextNode(' '))
+        }
+        break
+      case 'elaboratedBy':
+        if ($isTextNode(parentNode)) {
+          const TBNode = parentNode.getParent()
+          // console.log('textBlockKey, TBNode: ', textBlockKey, TBNode)
+          hlNode.setStyle(`background-color: ${colorMapping['elaboratedBy']}`)
+          TBNode.append(hlNode)
+          TBNode.append($createTextNode('  '))
+          // parentNode.insertAfter(hlNode)
+          // hlNode.insertAfter($createTextNode('456'))
+        } else {
+          hlNode.setStyle(`background-color: ${colorMapping['elaboratedBy']}`)
+          parentNode.append(hlNode)
+          parentNode.append($createTextNode('789'))
+        }
+        break
+      case 'attackedBy':
+        hlNode.setStyle(`background-color: ${colorMapping['attackedBy']}`)
+        if ($isTextNode(parentNode)) {
+          const TBNode = parentNode.getParent()
+          TBNode.append(hlNode)
+          TBNode.append($createTextNode('  '))
+        } else {
+          parentNode.append(hlNode)
+          parentNode.append($createTextNode(' '))
+        }
+        break
+      case 'root':
+        const rootNode = $getRoot()
+        hlNode.setStyle(`background-color: ${colorMapping['root']}`)
+        textBlockNode.append(hlNode)
+        rootNode.append(textBlockNode)
+        break
+      default:
+        console.log(
+          `node ${nodeMappings[curNodeKey]} has no valid type, type: ${curNode['type']}`
+        )
+        hlNode.setStyle(`background-color: #f9c74f`)
+        if ($isTextNode(parentNode)) {
+          const TBNode = parentNode.getParent()
+          TBNode.append(hlNode)
+          TBNode.append($createTextNode('  '))
+        } else {
+          parentNode.append(hlNode)
+          parentNode.append($createTextNode(' '))
+        }
+    }
+    curNode['isImplemented'] = true
+    depGraph[curNodeKey] = curNode
+    // Add to nodeMappings
+    nodeMappings[curNodeKey] = hlNode.getKey()
+  } else if (curNode['needsUpdate']) {
+    // Update the text node
+    const hlNode = $getNodeByKey(nodeMappings[curNodeKey])
+    hlNode.setTextContent(curNode['text'])
+    curNode['needsUpdate'] = false
+    depGraph[curNodeKey] = curNode
+  }
+
+  for (const childKey of curNode['children']) {
+    if (!visited.includes(childKey)) {
+      const { newNodeMappings, newDepGraph } = DFS(depGraph, childKey, nodeMappings, visited)
+      nodeMappings = newNodeMappings
+      depGraph = newDepGraph
+    }
+  }
+
+  return { newNodeMappings: nodeMappings, newDepGraph: depGraph }
 }
 
 export function addGenartionsToEditor (
   stateDepGraph,
-  rootFlowKey,
+  rootFlowKeys,
+  stateNodeMappings
+) {
+  let nodeMappings = JSON.parse(JSON.stringify(stateNodeMappings))
+  let depGraph = JSON.parse(JSON.stringify(stateDepGraph))
+
+  const visited = []
+
+  for (const rootFlowKey of rootFlowKeys) {
+    const { newNodeMappings, newDepGraph } = DFS(depGraph, rootFlowKey, nodeMappings, visited)
+    nodeMappings = newNodeMappings
+    depGraph = newDepGraph
+  }
+
+  // add line break after each text block
+  const root = $getRoot()
+  const children = root.getChildren()
+  children.forEach(child => {
+    if ($isParagraphNode(child)) {
+      const pChildren = child.getChildren()
+      pChildren.forEach(pChild => {
+        if ($isTextBlockNode(pChild)) {
+          const linebreakNode1 = $createLineBreakNode()
+          const linebreakNode2 = $createLineBreakNode()
+          pChild.append(linebreakNode1)
+          pChild.append(linebreakNode2)
+        }
+      })
+    }
+  })
+
+  console.log("updatedDepGraph: ", depGraph)
+
+  return { updatedMappings: nodeMappings, updatedGraph: depGraph } 
+}
+
+export function addGenartionsToEditorBFS (
+  stateDepGraph,
+  rootFlowKeys,
   stateNodeMappings
 ) {
   // nodeMappings: { flowNodeKey: editorNodeKey }
 
   let nodeMappings = JSON.parse(JSON.stringify(stateNodeMappings))
   let depGraph = JSON.parse(JSON.stringify(stateDepGraph))
-  const depRoot = depGraph[rootFlowKey]
+  // const depRoot = depGraph[rootFlowKey]
 
-  if (depRoot === undefined) {
-    console.log(
-      '[addGenartionsToEditor] depRoot or depRoot is undefined, rootFlowKey: ',
-      rootFlowKey
-    )
-    return
-  }
+  // if (depRoot === undefined) {
+  //   console.log(
+  //     '[addGenartionsToEditor] depRoot or depRoot is undefined, rootFlowKey: ',
+  //     rootFlowKey
+  //   )
+  //   return
+  // }
 
-  const queue = [rootFlowKey]
+  const queue = [...rootFlowKeys]
   const visited = []
   // Perform BFS to add text nodes
   while (queue.length > 0) {
@@ -391,15 +545,18 @@ export function addGenartionsToEditor (
       // console.log("depGraph: ", depGraph)
       const curNode = depGraph[curNodeKey]
       queue.push(...curNode.children)
-      if (!(curNodeKey in Object.keys(nodeMappings)) && !curNode['isImplemented']) {
+      if (
+        !(curNodeKey in Object.keys(nodeMappings)) &&
+        !curNode['isImplemented']
+      ) {
         // Only add lexical node when the corrresponding flow node is not implemented in the editor (which means it is newly added)
 
         console.log(nodeMappings)
-        console.log("curNode parent: ", curNode['parent'])
+        console.log('curNode parent: ', curNode['parent'])
         const parentNode = $getNodeByKey(nodeMappings[curNode['parent']])
-        console.log("parent key: ", nodeMappings[curNode['parent']])
+        console.log('parent key: ', nodeMappings[curNode['parent']])
         if (parentNode === undefined) {
-          console.log("Cannot found parent node in editor")
+          console.log('Cannot found parent node in editor')
           continue
         }
 
@@ -407,48 +564,72 @@ export function addGenartionsToEditor (
           'highlight-dep-elb',
           curNode['text']
         )
-        hlNode.setStyle(`background-color: ${randomizeBGColor()}`)
+        // hlNode.setStyle(`background-color: ${randomizeBGColor()}`)
 
         switch (curNode['type']) {
           case 'featuredBy':
             // Add a new textBlock Node
             const textBlockNode = $createTextBlockNode()
             // get parent node
+            hlNode.setStyle(`background-color: ${colorMapping['featuredBy']}`)
             textBlockNode.append(hlNode)
+            textBlockNode.append($createTextNode('  '))
             if ($isTextNode(parentNode)) {
               parentNode.insertAfter(textBlockNode)
+              // textBlockNode.append($createTextNode('123'))
             } else {
               parentNode.append(textBlockNode)
+              parentNode.append($createTextNode(' '))
             }
             break
           case 'elaboratedBy':
             if ($isTextNode(parentNode)) {
-              parentNode.insertAfter(hlNode)
+              const TBNode = parentNode.getParent()
+              // console.log('textBlockKey, TBNode: ', textBlockKey, TBNode)
+              hlNode.setStyle(
+                `background-color: ${colorMapping['elaboratedBy']}`
+              )
+              TBNode.append(hlNode)
+              TBNode.append($createTextNode('  '))
+              // parentNode.insertAfter(hlNode)
+              // hlNode.insertAfter($createTextNode('456'))
             } else {
+              hlNode.setStyle(
+                `background-color: ${colorMapping['elaboratedBy']}`
+              )
               parentNode.append(hlNode)
+              parentNode.append($createTextNode('789'))
             }
             break
           case 'attackedBy':
+            hlNode.setStyle(`background-color: ${colorMapping['attackedBy']}`)
             if ($isTextNode(parentNode)) {
-              parentNode.insertAfter(hlNode)
+              const TBNode = parentNode.getParent()
+              TBNode.append(hlNode)
+              TBNode.append($createTextNode('  '))
             } else {
               parentNode.append(hlNode)
+              parentNode.append($createTextNode(' '))
             }
             break
           default:
+            console.log(
+              `node ${nodeMappings[curNodeKey]} has no valid type, type: ${curNode['type']}`
+            )
+            hlNode.setStyle(`background-color: #f9c74f`)
             if ($isTextNode(parentNode)) {
-              parentNode.insertAfter(hlNode)
+              const TBNode = parentNode.getParent()
+              TBNode.append(hlNode)
+              TBNode.append($createTextNode('  '))
             } else {
               parentNode.append(hlNode)
+              parentNode.append($createTextNode(' '))
             }
         }
         curNode['isImplemented'] = true
         depGraph[curNodeKey] = curNode
         // Add to nodeMappings
         nodeMappings[curNodeKey] = hlNode.getKey()
-
-        // console.log('nodeMappings: ', nodeMappings)
-        // console.log('updatedGraph:', depGraph)
       } else if (curNode['needsUpdate']) {
         // Update the text node
         const hlNode = $getNodeByKey(nodeMappings[curNodeKey])
@@ -459,7 +640,22 @@ export function addGenartionsToEditor (
     }
   }
 
-
+  // add line break after each text block
+  const root = $getRoot()
+  const children = root.getChildren()
+  children.forEach(child => {
+    if ($isParagraphNode(child)) {
+      const pChildren = child.getChildren()
+      pChildren.forEach(pChild => {
+        if ($isTextBlockNode(pChild)) {
+          const linebreakNode1 = $createLineBreakNode()
+          const linebreakNode2 = $createLineBreakNode()
+          pChild.append(linebreakNode1)
+          pChild.append(linebreakNode2)
+        }
+      })
+    }
+  })
 
   return { updatedMappings: nodeMappings, updatedGraph: depGraph }
 }

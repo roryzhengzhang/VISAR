@@ -128,8 +128,8 @@ export default function WeaknessFloatGroup ({ editor }) {
       } else {
         selected_text = node.getTextContent()
       }
-      // IP: http://127.0.0.1:8088
-      fetch('http://127.0.0.1:8088/getWeakness', {
+      // IP: http://34.70.132.79:8088
+      fetch('http://34.70.132.79:8088/getWeakness', {
         method: 'POST',
         mode: 'cors',
         headers: {

@@ -14,6 +14,7 @@ const initialState = {
   selectedPrompts: [],
   curSelectedNodeKey: "",
   curClickedNodeKey: "",
+  curSelection: "",
   promptStatus: 'empty',
   type: "elaborate",
   selectedSent: "",
@@ -26,6 +27,13 @@ const initialState = {
   supportingArguments: [],
   condition: null,
   updateModalOpen: false,
+  addNodeModalOpen: false,
+  saveModalOpen: false,
+  username: "",
+  sessionId: "",
+  isReactFlowInModal: false,
+  isRangeMode: false,
+  taskDescription: null
 }
 
 export const generateRewrite = createAsyncThunk(
@@ -34,7 +42,7 @@ export const generateRewrite = createAsyncThunk(
     // const state = getState();
     console.log("[generateRewrite] args:", args)
     // const { basePrompt, mode, furInstruction, curSent } = args;
-    const res = await fetch("http://127.0.0.1:8088/rewrite", {
+    const res = await fetch("http://34.70.132.79:8088/rewrite", {
       method: "POST",
       mode: "cors",
       headers: {
@@ -66,10 +74,40 @@ const editorSlice = createSlice({
         selectedSent: action.payload
       }
     },
+    setRangeGenerationMode (state, action) {
+      return {
+        ...state,
+        isRangeMode: action.payload
+      }
+    },
+    setSessionId (state, action) {
+      return {
+        ...state,
+        sessionId: action.payload
+      }
+    },
+    setUsername (state, action) {
+      return {
+        ...state,
+        username: action.payload
+      }
+    },
+    setIsReactFlowInModal (state, action) {
+      return {
+        ...state,
+        isReactFlowInModal: true
+      }
+    },
     setType (state, action) {
       return {
         ...state,
         type: action.payload
+      }
+    },
+    setTaskDescription(state, action) {
+      return {
+        ...state,
+        taskDescription: action.payload
       }
     },
     setIsCurNodeEditable (state, action) {
@@ -93,7 +131,8 @@ const editorSlice = createSlice({
     setFlowModalClose (state, action) {
       return {
         ...state,
-        flowModalOpen: false
+        flowModalOpen: false,
+        isReactFlowInModal: false
       }
     },
     setAlternativeModalOpen (state, action) {
@@ -106,6 +145,30 @@ const editorSlice = createSlice({
       return {
         ...state,
         updateModalOpen: true
+      }
+    },
+    setAddNodeModalOpen (state, action) {
+      return {
+        ...state,
+        addNodeModalOpen: true
+      }
+    },
+    setSaveModalOpen (state, action) {
+      return {
+        ...state,
+        saveModalOpen: true
+      }
+    },
+    setSaveModalClose (state, action) {
+      return {
+        ...state,
+        saveModalOpen: false
+      }
+    },
+    setAddNodeModalClose (state, action) {
+      return {
+        ...state,
+        addNodeModalOpen: false
       }
     },
     setUpdateModalClose (state, action) {
@@ -200,6 +263,12 @@ const editorSlice = createSlice({
       return {
         ...state,
         selectedWeaknesses: selectedWeaknesses,
+      }
+    },
+    setCurSelection(state, action) {
+      return {
+        ...state,
+        curSelection: action.payload
       }
     },
     setPromptKeywords (state, action) {
@@ -386,6 +455,7 @@ export const {
   setCurRangeNodeKey,
   setRefineModalOpen,
   setRefineModalClose,
+  setCurSelection,
   toggleWeakness,
   setCounterArguments,
   setWeaknesses,
@@ -403,6 +473,15 @@ export const {
   setStudyCondition,
   setUpdateModalOpen,
   setUpdateModalClose,
+  setAddNodeModalOpen,
+  setAddNodeModalClose,
+  setSessionId,
+  setUsername,
+  setSaveModalOpen,
+  setSaveModalClose,
+  setIsReactFlowInModal,
+  setRangeGenerationMode,
+  setTaskDescription
 } = editorSlice.actions
 
 export default editorSlice.reducer

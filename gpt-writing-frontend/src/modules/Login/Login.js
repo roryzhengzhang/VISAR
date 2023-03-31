@@ -39,8 +39,11 @@ function Copyright (props) {
 const theme = createTheme()
 
 export default function SignIn () {
-
-  const [cond, setCondition] = React.useState('baseline');
+  const [cond, setCondition] = React.useState('baseline')
+  const [username, setUsername] = React.useState('')
+  const [password, setPassword] = React.useState('')
+  const [status, setStatus] = React.useState('') // [idle, pending, resolved, rejected]
+  const [message, setMessage] = React.useState('')
 
   const navigate = useNavigate()
 
@@ -51,6 +54,55 @@ export default function SignIn () {
       email: data.get('email'),
       password: data.get('password')
     })
+  }
+
+  async function authenticate () {
+    const res = await fetch('http://34.70.132.79:8088/login', {
+      method: 'POST',
+      mode: 'cors',
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      },
+      body: JSON.stringify({
+        username: username,
+        password: password,
+        condition: cond
+      })
+    })
+      .then(res => res.json())
+      .then(res => {
+        console.log(res)
+        setStatus(res.status)
+        setMessage(res.message)
+        let editorState = null
+        let flowSlice = null
+        let editorSlice = null
+        if (res.preload === true) {
+          editorState = res.editorState
+          flowSlice = res.flowSlice
+          editorSlice = res.editorSlice
+        }
+
+        const taskProblem = res.taskProblem
+        const taskDescription = res.taskDescription
+
+        const task = {
+          topic: taskProblem,
+          description: taskDescription
+        }
+
+        console.log("task: ", task)
+
+        const sessionId = Math.floor(Math.random() * 10000)
+
+        if (res.status === 'success') {
+          navigate('/editor', {
+            state: { condition: cond, username: username, preload: res.preload, sessionId: sessionId, editorState: editorState, flowSlice: flowSlice, editorSlice: editorSlice, taskDescription: task }
+          })
+        }
+      })
   }
 
   return (
@@ -71,26 +123,35 @@ export default function SignIn () {
           <Typography component='h1' variant='h5'>
             Sign in
           </Typography>
-          <Box
-            component='form'
-            onSubmit={handleSubmit}
-            noValidate
-            sx={{ mt: 1 }}
-          >
+          <Box sx={{ mt: 1 }}>
             <TextField
               margin='normal'
               required
               fullWidth
               id='username'
               label='Username'
-              name='uersname'
+              value={username}
+              onFocus={() => {
+                setStatus('idle')
+                setMessage('')
+              }}
+              onChange={e => {
+                setUsername(e.target.value)
+              }}
               autoFocus
             />
             <TextField
               margin='normal'
               required
               fullWidth
-              name='password'
+              value={password}
+              onFocus={() => {
+                setStatus('idle')
+                setMessage('')
+              }}
+              onChange={e => {
+                setPassword(e.target.value)
+              }}
               label='Password'
               type='password'
               id='password'
@@ -99,7 +160,9 @@ export default function SignIn () {
             <RadioGroup
               aria-labelledby='condition-radio-buttons-group-label'
               value={cond}
-              onChange={e => {setCondition(e.target.value)}}
+              onChange={e => {
+                setCondition(e.target.value)
+              }}
               name='radio-buttons-group'
             >
               <FormControlLabel
@@ -113,7 +176,7 @@ export default function SignIn () {
                 label='Banana version'
               />
               <FormControlLabel
-                value='full'
+                value='advanced'
                 control={<Radio />}
                 label='Orange version'
               />
@@ -123,22 +186,16 @@ export default function SignIn () {
               fullWidth
               variant='contained'
               sx={{ mt: 3, mb: 2 }}
-              onClick={() => navigate('/editor', {state: {condition: cond}})} 
+              onClick={authenticate}
             >
               Log in
             </Button>
-            {/* <Grid container>
-              <Grid item xs>
-                <Link href="#" variant="body2">
-                  Forgot password?
-                </Link>
-              </Grid>
-              <Grid item>
-                <Link href="#" variant="body2">
-                  {"Don't have an account? Sign Up"}
-                </Link>
-              </Grid>
-            </Grid> */}
+            {status === 'fail' && message === 'Password incorrect' && (
+              <Typography sx={{ color: 'red' }}>Password incorrect</Typography>
+            )}
+            {status === 'fail' && message === 'User not found' && (
+              <Typography sx={{ color: 'red' }}>User not found</Typography>
+            )}
           </Box>
         </Box>
       </Container>

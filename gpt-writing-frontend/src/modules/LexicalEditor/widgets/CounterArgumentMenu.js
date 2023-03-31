@@ -169,8 +169,8 @@ export default function CounterArgumentMenu ({ editor }) {
 
       keyword = depGraph[flowKey]["prompt"]
 
-      // IP: http://127.0.0.1:8088
-      fetch('http://127.0.0.1:8088/counterArguments', {
+      // IP: http://34.70.132.79:8088
+      fetch('http://34.70.132.79:8088/counterArguments', {
         method: 'POST',
         mode: 'cors',
         headers: {
@@ -242,7 +242,12 @@ export default function CounterArgumentMenu ({ editor }) {
       const pattern = /^\d{1,2}\. (.*):/i
       for (const ca of selectedCounterArguments) {
         const match = ca.match(pattern)
-        data.push({text: match[0].slice(0, -1), type: "CA", parent_lnode_key: curSelectedNodeKey, rel_type: "attackedBy"})
+        if (match !== null) {
+          data.push({text: match[0].slice(0, -1), type: "CA", parent_lnode_key: curSelectedNodeKey, rel_type: "attackedBy"})
+        } else {
+          data.push({text: ca, type: "CA", parent_lnode_key: curSelectedNodeKey, rel_type: "attackedBy"})
+        }
+        
       }
   
       dispatch(insertNewGeneratedNodes(data));

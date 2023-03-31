@@ -160,8 +160,8 @@ export default function SupportingEvidenceMenu ({ editor }) {
         console.log("flowKey: ", flowKey)
       }
 
-      // IP: http://127.0.0.1:8088
-      fetch('http://127.0.0.1:8088/supportingArguments', {
+      // IP: http://34.70.132.79:8088
+      fetch('http://34.70.132.79:8088/supportingArguments', {
         method: 'POST',
         mode: 'cors',
         headers: {

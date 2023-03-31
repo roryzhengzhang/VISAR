@@ -4,36 +4,125 @@ import json
 import openai
 from flask import Flask, redirect, render_template, request, url_for, make_response, jsonify
 from flask_cors import CORS, cross_origin
+from pymongo import MongoClient
 
 app = Flask(__name__)
 cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
-openai.api_key = "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"
+openai.api_key = "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"
 model_type = "gpt-3.5-turbo"
 tempature = 0.6
 max_tokens = 2048
+enablePreload = False
 test = False
+
+client = MongoClient(
+    'mongodb+srv://zhengzhang:950117@research.xvi5gpd.mongodb.net/?retryWrites=true&w=majority')
+db = client.gptwriting
+
+
+@app.route("/login", methods=["POST"])
+def login():
+    if request.method == "POST":
+        response = request.get_json()
+        username = response["username"]
+        password = response["password"]
+        condition = response["condition"]
+        print(f"username: {username}, password: {password}")
+        user = db.users.find_one({"username": username})
+        if user is None:
+            print("User not found")
+            return jsonify({"status": "fail", "message": "User not found"})
+        if user["password"] != password:
+            print("Password incorrect")
+            return jsonify({"status": "fail", "message": "Password incorrect"})
+        print("Login successfully")
+        # load state from database
+
+        topicId = user["condTopicMapping"][condition]
+
+        problem = db.problemset.find_one({"id": topicId})
+
+        if user["latestSessionId"] != -1 and enablePreload:
+            state = db.drafts.find_one(
+                {"username": username, "sessionId": user["latestSessionId"]})
+            return jsonify({"status": "success", "message": "Login successfully", "preload": True, "editorState": state["editorState"], "flowSlice": state["flowSlice"], "editorSlice": state["editorSlice"], "taskProblem": problem["topic"], "taskDescription": problem["description"]})
+        else:
+            return jsonify({"status": "success", "message": "Login successfully", "preload": False, "editorState": "", "flowSlice": "", "editorSlice": "", "taskProblem": problem["topic"], "taskDescription": problem["description"]})
+
+@app.route("/logInteractionData", methods=["POST"])
+def logInteractionData():
+    if request.method == "POST":
+        response = request.get_json()
+        username = response["username"]
+        sessionId = response["sessionId"]
+        type = response["type"]
+        interactionData = response["interactionData"]
+        db.interactionData.insert_one(
+            {"username": username, "sessionId": sessionId, "type": type, "interactionData": interactionData})
+        return jsonify({"status": "success", "message": "Interaction data logged successfully"})
+
+@app.route("/loadDraft", methods=["POST"])
+def loadDraft():
+    if request.method == "POST":
+        response = request.get_json()
+        username = response["username"]
+        user = db.users.find_one({"username": username})
+        if user is not None:
+            sessionId = user["latestSessionId"]
+            state = db.drafts.find_one(
+                {"username": username, "sessionId": sessionId})
+            if state is None:
+                print("Draft not found")
+                return jsonify({"status": "fail", "message": "Draft not found"})
+            print("Draft loaded successfully")
+            return jsonify({"status": "success", "message": "Draft loaded successfully", "editorState": state["editorState"], "flowSlice": state["flowSlice"], "editorSlice": state["editorSlice"]})
+        else:
+            print("User not found")
+            return jsonify({"status": "fail", "message": "User not found"})
+
+@app.route("/saveDraft", methods=["POST"])
+def saveDraft():
+    if request.method == "POST":
+        response = request.get_json()
+        username = response["username"]
+        sessionId = response["sessionId"]
+        draft = response["draft"]
+        depGraph = response["depGraph"]
+        editorState = response["editorState"]
+        flowSlice = response["flowSlice"]
+        editorSlice = response["editorSlice"]
+        condition = response["condition"]
+        # depGraph = json.loads(response["depGraph"])
+
+        db.drafts.replace_one({"username": username, "sessionId": sessionId}, {
+                              "username": username, "sessionId": sessionId, "draft": draft, "condition": condition, "depGraph": depGraph, "editorState": editorState, "flowSlice": flowSlice, "editorSlice": editorSlice}, upsert=True)
+
+        db.users.update_one({"username": username}, { "$set": { "latestSessionId" : sessionId  }})
+
+        return jsonify({"status": "success", "message": "Draft saved successfully"})
 
 
 def implementSupportingArgument(supportingArgument, argumentSupported):
-    
-        if test:
-            return "This is a test mode response (SA)"
-    
-        messages = [
-            {"role": "system", "content": "You are a helpful writing assistant focusing on argumentative essay tutoring. You are trying to support an argument by considering a provided supporting argument."},
-            {"role": "user", "content": f'''Please write a paragraph that supports the argument: "{argumentSupported}" by realizing the following kind of supporting evidence: "{supportingArgument}"'''},
-        ]
-    
-        # prompt = f'''Please list the counter arguments that can challenge the argument: "Houston is a good city because it has a convenient transportaion and afforable living cost"'''
-        response = openai.ChatCompletion.create(
-            model=model_type,
-            messages=messages,
-            temperature=tempature,
-            max_tokens=max_tokens
-        )
-    
-        return response.choices[0].message.content.strip().replace("\n", " ")
+
+    if test:
+        return "This is a test mode response (SA)"
+
+    messages = [
+        {"role": "system", "content": "You are a helpful writing assistant focusing on argumentative essay tutoring. You are trying to support an argument by considering a provided supporting argument."},
+        {"role": "user", "content": f'''Please write a paragraph that supports the argument: "{argumentSupported}" by realizing the following kind of supporting evidence: "{supportingArgument}"'''},
+    ]
+
+    # prompt = f'''Please list the counter arguments that can challenge the argument: "Houston is a good city because it has a convenient transportaion and afforable living cost"'''
+    response = openai.ChatCompletion.create(
+        model=model_type,
+        messages=messages,
+        temperature=tempature,
+        max_tokens=max_tokens
+    )
+
+    return response.choices[0].message.content.strip().replace("\n", " ")
+
 
 def implementCounterArgument(keyword, counterArgument, argumentAttacked):
 
@@ -98,6 +187,175 @@ def generateStartingSentence(keyword, discussionPoints, globalContext):
     return response.choices[0].message.content.strip().replace("\n", " ")
 
 
+@app.route("/implementTopicSentence", methods=["POST"])
+def implementTopicSentence():
+    if test:
+        return "This is a test mode response (Topic Sentence)"
+
+    response = request.get_json()
+    prompt = response['prompt']
+
+    messages = [
+        {"role": "system", "content": f'''You are a helpful writing assistant focusing on argumentative essay tutoring. You are trying to elaborate on a particular given discussion point to support my argument.'''},
+        {"role": "user", "content": f'''Please write a sentence that claim my argument "{prompt}":'''}
+    ]
+
+    response = openai.ChatCompletion.create(
+        model=model_type,
+        messages=messages,
+        temperature=tempature,
+        max_tokens=max_tokens
+    )
+
+    res = {
+            "response": response.choices[0].message.content.strip().replace("\n", " ")
+    }
+
+    return jsonify(res)
+
+
+def generateTopicSentence(prompt, context):
+    if test:
+        return "This is a test mode response (Elaboration)"
+
+    messages = [
+        {"role": "system", "content": f'''You are a helpful writing assistant focusing on argumentative essay tutoring. You are trying to elaborate on a particular given discussion point to support my argument.'''},
+        {"role": "user", "content": f'''Please write a sentence that claim my argument "{prompt}":'''}
+    ]
+
+    response = openai.ChatCompletion.create(
+        model=model_type,
+        messages=messages,
+        temperature=tempature,
+        max_tokens=max_tokens
+    )
+
+    return response.choices[0].message.content.strip().replace("\n", " ")
+
+@app.route("/implementCounterArgument", methods=["POST"])
+def gpt_implement_counter_argument():
+
+    if test:
+        return "This is a test mode response (Starting Sentence)"
+
+    if request.method == "POST":
+        response = request.get_json()
+        counterArgument = response["prompt"]
+        argumentAttacked = response["context"]
+
+        messages = [
+            {"role": "system", "content": "You are a helpful writing assistant focusing on argumentative essay tutoring. You are trying to argue against an argument by considering a provided counter argument."},
+            {"role": "user", "content": f'''Plesae write a paragraph that argues against the argument: "{argumentAttacked}" by considering the following counter argument: "{counterArgument}"'''},
+        ]
+
+        # prompt = f'''Please list the counter arguments that can challenge the argument: "Houston is a good city because it has a convenient transportaion and afforable living cost"'''
+        response = openai.ChatCompletion.create(
+            model=model_type,
+            messages=messages,
+            temperature=tempature,
+            max_tokens=max_tokens
+        )
+
+        res = {
+            "response": response.choices[0].message.content.strip().replace("\n", " ")
+        }
+
+        return jsonify(res)
+
+
+@app.route("/implementSupportingArgument", methods=["POST"])
+def gpt_implement_supporting_argument():
+
+    if test:
+        return "This is a test mode response (Starting Sentence)"
+
+    if request.method == "POST":
+        response = request.get_json()
+        supportingArgument = response["prompt"]
+        argumentSupported = response["context"]
+
+        messages = [
+            {"role": "system", "content": "You are a helpful writing assistant focusing on argumentative essay tutoring. You are trying to support an argument by considering a provided supporting argument."},
+            {"role": "user", "content": f'''Please write a paragraph that supports the argument: "{argumentSupported}" by realizing the following kind of supporting evidence: "{supportingArgument}"'''},
+        ]
+
+        # prompt = f'''Please list the counter arguments that can challenge the argument: "Houston is a good city because it has a convenient transportaion and afforable living cost"'''
+        response = openai.ChatCompletion.create(
+            model=model_type,
+            messages=messages,
+            temperature=tempature,
+            max_tokens=max_tokens
+        )
+
+        res = {
+            "response": response.choices[0].message.content.strip().replace("\n", " ")
+        }
+
+        return jsonify(res)
+
+
+@app.route("/implementElaboration", methods=["POST"])
+def gpt_implement_elaboration():
+
+    if test:
+        return "This is a test mode response (Starting Sentence)"
+
+    if request.method == "POST":
+        response = request.get_json()
+        prompt = response["prompt"]
+        context = response["context"]
+
+        messages = [
+            {"role": "system", "content": f'''You are a helpful writing assistant focusing on argumentative essay tutoring. You are trying to elaborate on a particular given discussion point to support my argument.'''},
+            {"role": "user", "content": f'''Please write a paragraph that elaborates on my argument "{context}" by considering the following discussion point "{prompt}":'''}
+        ]
+
+        response = openai.ChatCompletion.create(
+            model=model_type,
+            messages=messages,
+            temperature=tempature,
+            max_tokens=max_tokens
+        )
+
+        res = {
+            "response": response.choices[0].message.content.strip().replace("\n", " ")
+        }
+
+        return jsonify(res)
+
+
+@app.route("/implementKeyword", methods=["POST"])
+def gpt_keyword_sentence():
+
+    if test:
+        return "This is a test mode response (Starting Sentence)"
+
+    if request.method == "POST":
+        response = request.get_json()
+        prompt = response["prompt"]
+        context = response["context"]
+
+        print("[implement keyword] request: ", response)
+
+        messages = [
+            {"role": "system", "content": f'''You are a helpful writing assistant focusing on argumentative essay tutoring. You are trying to write a starting sentence of the paragrah that support user's argument from a particular perspective.'''},
+            {"role": "user", "content": f'''Write a starting sentence for the paragraph that elaborates on the argument {context} from the perspective of {prompt}'''}
+        ]
+
+        response = openai.ChatCompletion.create(
+            model=model_type,
+            messages=messages,
+            temperature=tempature,
+            max_tokens=max_tokens
+        )
+
+        res = {
+            "response": response.choices[0].message.content.strip().replace("\n", " ")
+        }
+
+        return jsonify(res)
+
+
 @app.route("/", methods=["GET", "POST"])
 def gpt_inference():
     if request.method == "GET":
@@ -115,16 +373,17 @@ def gpt_inference():
         return jsonify(res)
 
 
-@app.route("/keyword", methods=["GET"])
+@app.route("/keyword", methods=["POST"])
 def gpt_fetch_keywords():
 
+    print("[keyword] request: ", request)
     # test mode
     if test == True:
         return jsonify({"response": ["Quality of life", "Economy", "Population", "Education", "Location", "Safety", "Job opportunity"]})
 
-    if request.method == "GET":
-        prompt = request.args.get("prompt")
-        mode = request.args.get("mode")
+    if request.method == "POST":
+        response = request.get_json()
+        prompt = response["prompt"]
 
 #         elaborate_example = '''
 # Aspects for for elaborating: "Houston is a good city":
@@ -160,7 +419,7 @@ def gpt_fetch_keywords():
 
         messages = [
             {"role": "system", "content": "You are a helpful writing assistant. You are given a argument and need to think of key aspects to elaborate on or evidence to support the argument."},
-            {"role": "user", "content": '''Please list key aspects that are worth to discuss in order to support arguemnt: "Houston is a good city"'''},
+            {"role": "user", "content": '''Please list key aspects that are worth to discuss in order to support argument: "Houston is a good city"'''},
             {"role": "assistant", "content": '''
 1. Quality of life
 2. Economy
@@ -169,7 +428,7 @@ def gpt_fetch_keywords():
 5. Location
 6. Safety
 7. Job opportunity'''},
-            {"role": "user", "content": '''Please list key aspects that are worth to discuss in order to support arguemnt: "Computer Science is a good major"'''},
+            {"role": "user", "content": '''Please list key aspects that are worth to discuss in order to support argument: "Computer Science is a good major"'''},
             {"role": "assistant", "content": '''
 1. Social demand
 2. Job opportunity
@@ -178,7 +437,7 @@ def gpt_fetch_keywords():
 5. Enrollment
 6. Popularity
 7. Job security'''},
-            {"role": "user", "content": f'''Please list key aspects that are worth to discuss in order to support arguemnt: "{prompt}"'''},
+            {"role": "user", "content": f'''Please list key aspects that are worth to discuss in order to support argument: "{prompt}"'''},
         ]
 
         # if mode == "elaborate":
@@ -232,6 +491,9 @@ def gpt_fetch_prompts():
         context = response["context"]
 
         prompts = []
+        res = []
+
+        print("[prompts] request: " + str(response))
 
         # test mode
 
@@ -294,6 +556,7 @@ def gpt_fetch_prompts():
             }
         return jsonify(res)
 
+
 @app.route("/rewrite", methods=["POST"])
 def gpt_rewrite():
     if request.method == "POST":
@@ -304,6 +567,9 @@ def gpt_rewrite():
         curSent = response["curSent"]
 
         print("[rewrite] request: ", response)
+
+        if test:
+            return "This is a test mode response (Starting Sentence)"
 
         res = {}
 
@@ -350,12 +616,13 @@ def gpt_rewrite():
             candidates = [response.choices[i].message.content.strip().replace("\n", "")
                           for i in range(min(8, len(response.choices)))]
             res["candidates"] = candidates
-        
+
         if mode == "fix":
             weaknesses = response["weaknesses"]
             messages = [
                 {"role": "system", "content": "You are a helpful writing assistant. You are trying to fix the mentioned logical weaknesses in my argument."},
-                {"role": "user", "content": f'''I just made an argument: {curSent}. I know this argument has the following logical weaknesses: {"; ".join(weaknesses)}. Rewrite the argument to fix the logical weaknesses.'''''}
+                {"role": "user",
+                    "content": f'''I just made an argument: {curSent}. I know this argument has the following logical weaknesses: {"; ".join(weaknesses)}. Rewrite the argument to fix the logical weaknesses.'''''}
             ]
 
             response = openai.ChatCompletion.create(
@@ -368,8 +635,9 @@ def gpt_rewrite():
 
             candidates = [response.choices[i].message.content.strip().replace("\n", "")
                           for i in range(min(8, len(response.choices)))]
-            
-            candidates = [ c.split(":")[1] if ":" in c else c for c in candidates ]
+
+            candidates = [
+                c.split(":")[1] if ":" in c else c for c in candidates]
 
             res["candidates"] = candidates
 
@@ -506,7 +774,7 @@ def gpt_supporting_argument():
         res = response.choices[0].message.content.strip()
         res = res.strip().splitlines()
         return jsonify({"response": res})
-    
+
 
 @app.route("/counterArguments", methods=["POST"])
 def gpt_counter_argument():
@@ -561,6 +829,7 @@ DepGraph = {
 }
 '''
 
+
 @app.route("/completion", methods=["POST"])
 def gpt_completion():
     if request.method == "POST":
@@ -575,7 +844,7 @@ def gpt_completion():
             {"role": "system", "content": "You are a helpful writing assistant focusing on argumentative essay tutoring. You are trying to complete the given prompt."},
             {"role": "user", "content": f'''Please complete the following prompt: "{prompt}"'''},
         ]
-        
+
         response = openai.ChatCompletion.create(
             model=model_type,
             messages=messages,
@@ -595,29 +864,27 @@ def generateText():
         response = request.get_json()
         depGraph = response["dependencyGraph"]
         # The flowNode key of the root of the dependency graph, which is usually a node that is already implemented
-        rootKey = response["rootKey"]
+        rootKeys = response["rootKeys"]
 
         output = {}
 
-        root = None
-        try:
-            root = depGraph[rootKey]
-            if root is None:
-                raise Exception(
-                    "The root does not exist in the dependency graph")
-        except Exception as e:
-            print(e)
-            output["error"] = str(e)
+        if len(rootKeys) == 0:
+            output["error"] = "The root does not exist in the dependency graph"
+            print("The root does not exist in the dependency graph")
             return jsonify(output)
+
+
 
         # generate text through BFS traversal
         visited = []
-        queue = [rootKey]
+        queue = [root for root in rootKeys]
 
         print("dependency graph: ", depGraph)
+        print("queue: ", queue)
 
         while queue:
             node = queue.pop(0)
+            print("Current node: ", node)
             if node not in visited:
                 if node not in depGraph:
                     raise Exception(
@@ -631,15 +898,16 @@ def generateText():
                     # generate text for this node
                     prompt = depGraph[node]["prompt"]
                     parentKey = depGraph[node]["parent"]
-                    if parentKey not in depGraph:
+                    if depGraph[node]["type"] != "root" and parentKey not in depGraph:
                         print("parent does not exist in graph")
-                        return
-                    parent = depGraph[parentKey]
+                        output["error"] = "parent does not exist in graph"
+                        output["depGraph"] = depGraph
+                        return jsonify(output) 
+                    parent = depGraph[parentKey] if depGraph[node]["type"] != "root" else None
                     # ASSUMPTION: the parent node is always implemented before its children
                     if depGraph[node]["type"] == "attackedBy":
                         # generate counter argument against the parent node
 
-                        # get the keyword
                         keywordNode = node
                         while (depGraph[keywordNode]["type"] != "featuredBy"):
                             keywordNode = depGraph[keywordNode]["parent"]
@@ -661,26 +929,17 @@ def generateText():
                         # generate support for the parent node
                         generation = implementSupportingArgument(
                             prompt, parent["text"])
+                    elif depGraph[node]["type"] == "root":
+                        generation = generateTopicSentence(
+                            depGraph[node]["prompt"], depGraph[node]["text"]
+                        )
 
                     print(f"node: {node}, text: {generation}")
                     depGraph[node]["text"] = generation
 
         output["depGraph"] = depGraph
-        return jsonify(output)
-
-        # # test mode
-        # if test == True:
-        #     generations = {}
-        #     if len(keywords) > 0:
-        #         for k in keywords:
-        #             if depGraph.get(k) is None or len(depGraph[k]) == 0:
-        #                 continue
-        #             for dp in depGraph[k]:
-        #                 generations[dp["content"]
-        #                             ] = "This is a test generation for " + dp["content"]
-        #         output["generations"] = generations
-        #         return jsonify(output)
-        #     else:
+        print("generateFromDepGraph returned")
+        return jsonify(output) 
 
 
 @app.route("/generateFromSketch", methods=["POST"])

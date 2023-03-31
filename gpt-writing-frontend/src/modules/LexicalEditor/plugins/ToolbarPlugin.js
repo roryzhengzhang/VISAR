@@ -21,8 +21,10 @@ import { $isLinkNode, TOGGLE_LINK_COMMAND } from '@lexical/link'
 import {
   setFlowModalOpen,
   setMindmapClose,
-  setMindmapOpen
+  setMindmapOpen,
+  setSaveModalOpen
 } from '../slices/EditorSlice'
+import store from '../../../reducers/store'
 import {
   $isParentElementRTL,
   $wrapNodes,
@@ -453,6 +455,9 @@ export default function ToolbarPlugin () {
   const [isPredicting, setIsPredicting] = useState(false)
   const dispatch = useDispatch()
   const mindMapOpen = useSelector(state => state.editor.mindmapOpen)
+  const username = useSelector(state => state.editor.username)
+  const sessionId = useSelector(state => state.editor.sessionId)
+  const dependencyGraph = useSelector(state => state.flow.dependencyGraph)
 
   const updateToolbar = useCallback(() => {
     const selection = $getSelection()
@@ -728,15 +733,6 @@ export default function ToolbarPlugin () {
             >
               <i className='format link' />
             </button>
-            <button
-              onClick={generateText}
-              className={
-                'toolbar-item spaced ' + (isPredicting ? 'active' : '')
-              }
-              aria-label='Insert Predict'
-            >
-              <ConnectWithoutContactIcon />
-            </button>
             {isLink &&
               createPortal(
                 <FloatingLinkEditor editor={editor} />,
@@ -779,10 +775,90 @@ export default function ToolbarPlugin () {
             >
               <i className='format justify-align' />
             </button>
+            <Divider />
+            <button
+              className='toolbar-item'
+              aria-label='Load Draft'
+              onClick={() => {
+                editor.update(() => {
+                  const res = fetch('http://34.70.132.79:8088/loadDraft', {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: {
+                      'Access-Control-Allow-Origin': '*',
+                      'Content-Type': 'application/json',
+                      Accept: 'application/json'
+                    },
+                    body: JSON.stringify({
+                      username: username
+                    })
+                  })
+                    .then(res => res.json())
+                    .then(res => {
+                      if (res.status === 'success') {
+                        const editorState = res['editorState']
+                        const flowSlice = res['flowSlice']
+                        const editorSlice = res['editorSlice']
+                        const initEditorState =
+                          editor.parseEditorState(editorState)
+                        console.log('[load state] editorState: ', editorState)
+                        editor.setEditorState(initEditorState)
+                      }
+                    })
+                })
+              }}
+            >
+              <i className='sync' />
+            </button>
+            <button
+              className='toolbar-item'
+              aria-label='Save Draft'
+              onClick={() => {
+                // editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, 'justify')
+                editor.update(() => {
+                  const root = $getRoot()
+                  const editorState = editor.getEditorState()
+                  const flowSlice = store.getState().flow
+                  const editorSlice = store.getState().editor
+
+                  console.log('store: ', store.getState())
+                  console.log('flowSlice: ', flowSlice)
+                  console.log('editorSlice: ', editorSlice)
+
+                  const res = fetch('http://34.70.132.79:8088/saveDraft', {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: {
+                      'Access-Control-Allow-Origin': '*',
+                      'Content-Type': 'application/json',
+                      Accept: 'application/json'
+                    },
+                    body: JSON.stringify({
+                      username: username,
+                      sessionId: sessionId,
+                      draft: root.getTextContent(),
+                      depGraph: JSON.stringify(dependencyGraph),
+                      editorState: JSON.stringify(editorState),
+                      flowSlice: JSON.stringify(flowSlice),
+                      editorSlice: JSON.stringify(editorSlice),
+                      condition: condition
+                    })
+                  })
+                    .then(res => res.json())
+                    .then(res => {
+                      if (res.status === 'success') {
+                        dispatch(setSaveModalOpen())
+                      }
+                    })
+                })
+              }}
+            >
+              <i className='format save' />
+            </button>
           </>
         )}
       </div>
-      {condition === 'full' && (
+      {condition === 'advanced' && (
         <div className='toolbar-right'>
           {!mindMapOpen ? (
             <Tooltip title='Show mindmap' placement='top'>

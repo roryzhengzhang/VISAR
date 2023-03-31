@@ -836,6 +836,15 @@ i.justify-align {
   background-image: url(images/icons/justify.svg);
 }
 
+i.save {
+  background-image: url(images/icons/save.png);
+}
+
+i.sync {
+  background-image: url(images/icons/rotate.png);
+}
+
+
 .highlight-dep-elb {
   /* background-color: #cdb4db; */
   padding: 1px 0.25rem;

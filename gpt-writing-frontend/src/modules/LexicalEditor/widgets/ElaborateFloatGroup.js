@@ -57,6 +57,8 @@ import {
   setCurRangeNodeKey,
   setType,
   setCurSelectedNodeKey,
+  setIsReactFlowInModal,
+  setRangeGenerationMode,
 } from "../slices/EditorSlice";
 import { loadNodes, setNodeSelected } from "../slices/FlowSlice";
 
@@ -148,19 +150,19 @@ export default function ElaborateFLoatingGroup({ editor }) {
     // console.log("Nodes:")
     // console.log(nodes)
     setPromptedText(selected_text);
-    const fetchPromise = fetch(
-      "http://127.0.0.1:8088/keyword?" +
-        new URLSearchParams({
-          prompt: selected_text,
-          mode: type,
-        }),
-      {
-        mode: "cors",
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-        },
-      }
-    );
+    
+    const fetchPromise = fetch('http://34.70.132.79:8088/keyword', {
+      method: 'POST',
+      mode: 'cors',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      },
+      body: JSON.stringify({
+        prompt: selected_text,
+      })
+    })
 
     fetchPromise
       .then((res) => {
@@ -177,8 +179,8 @@ export default function ElaborateFLoatingGroup({ editor }) {
     dispatch(setPromptStatus("fetching"));
     setFetchingAlertOpen(true);
 
-    // IP: http://127.0.0.1:8088
-    fetch("http://127.0.0.1:8088/prompts", {
+    // IP: http://34.70.132.79:8088
+    fetch("http://34.70.132.79:8088/prompts", {
       method: "POST",
       mode: "cors",
       headers: {
@@ -206,7 +208,7 @@ export default function ElaborateFLoatingGroup({ editor }) {
       console.log(`selection: ${selected_text}`);
 
       const fetchPromise = fetch(
-        "http://http://127.0.0.1:8088/?" +
+        "http://http://34.70.132.79:8088/?" +
           new URLSearchParams({
             prompt: selected_text,
             mode: "elaborate",
@@ -361,8 +363,10 @@ export default function ElaborateFLoatingGroup({ editor }) {
   const handleContentSketchingClicked = (e) => {
     dispatch(loadNodes({ selectedText: promptedText, selectedKeywords: selectedKeywords , discussionPoints: selectedPrompts, curRangeNodeKey: curRangeNodeKey}));
     dispatch(setFlowModalOpen());
+    dispatch(setRangeGenerationMode(true))
     positionFloatingButton(buttonRef.current, null);
     dispatch(setPromptStatus("empty"))
+    dispatch(setIsReactFlowInModal())
   };
 
   return (
@@ -470,7 +474,7 @@ export default function ElaborateFLoatingGroup({ editor }) {
               </Typography>
               <Box>
                 <Box>
-                  <Tabs value={tabValue} onChange={handleTabChange} scrollButtons="auto">
+                  <Tabs value={tabValue} onChange={handleTabChange} scrollButtons="auto" variant="scrollable">
                     {selectedKeywords.map((r, index) => {
                       return <Tab key={index} label={r} color="primary" />;
                     })}

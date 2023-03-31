@@ -1,14 +1,17 @@
-import { memo, useState } from 'react'
+import { memo, useState, useEffect } from 'react'
 import { Handle, Position, useNodeId } from 'reactflow'
 import { useSelector, useDispatch } from 'react-redux'
 import {
   setNodeData,
   setNodeSelected,
   setDepGraphNodeAttribute,
-  setCurModifiedFlowNodeKey
+  setCurModifiedFlowNodeKey,
+  setNodeDataAttribute,
+  logInteractionData,
 } from '../../LexicalEditor/slices/FlowSlice'
 import {
   setCurSelectedNodeKey,
+  setIsReactFlowInModal,
   setUpdateModalOpen
 } from '../../LexicalEditor/slices/EditorSlice'
 import {
@@ -33,8 +36,10 @@ import Switch from '@mui/material/Switch'
 import Button from '@mui/material/Button'
 import LoopIcon from '@mui/icons-material/Loop'
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 
 const ResizableNode = ({ data }) => {
+  const [editor] = useLexicalComposerContext()
   const dispatch = useDispatch()
   const avatarColors = useSelector(state => state.flow.avatarColors)
   const flowEditorNodeMapping = useSelector(
@@ -43,18 +48,65 @@ const ResizableNode = ({ data }) => {
   const nodeId = useNodeId()
   const [isEditing, setIsEditing] = useState(false)
   const [shiftKeyDown, isShiftKeyDown] = useState(false)
+  const [oldText, setOldText] = useState('')
   const depGraph = useSelector(state => state.flow.dependencyGraph)
   const updateModalOpen = useSelector(state => state.editor.updateModalOpen)
   const nodeData = useSelector(state => state.flow.nodeData)
+  const curModifiedFlowNodeKey = useSelector(
+    state => state.flow.curModifiedFlowNodeKey
+  )
+  const username = useSelector(state => state.editor.username)
+  const sessionId = useSelector(state => state.editor.sessionId)
+  const sortedDependents = useSelector(
+    state => state.flow.dependentsOfModifiedNodes
+  )
+  const isReactFlowInModal = useSelector(
+    state => state.editor.isReactFlowInModal
+  )
+  const isLazyUpdate = useSelector(state => state.flow.isLazyUpdate)
 
   const onFinishButtonClick = () => {
     setIsEditing(false)
-    console.log("update Modal gonna be open")
-    if (!updateModalOpen) {
+    console.log('update Modal gonna be open')
+
+    dispatch(
+      setDepGraphNodeAttribute({
+        nodeKey: nodeId,
+        attribute: 'prompt',
+        value: nodeData[nodeId].label
+      })
+    )
+    dispatch(
+      logInteractionData({
+        username: username,
+        sessionId: sessionId,
+        type: "node-text-update",
+        interactionData: {
+          nodeId: nodeId,
+          newText: nodeData[nodeId].label,
+          oldText: oldText
+        }
+      })
+    )
+    setOldText(nodeData[nodeId].label)
+
+    if (!updateModalOpen && isLazyUpdate === false) {
       dispatch(setCurModifiedFlowNodeKey(nodeId))
-      dispatch(setUpdateModalOpen())
+      if (isReactFlowInModal === false) {
+        dispatch(setUpdateModalOpen())
+      }
     }
+
   }
+
+  useEffect(() => {
+    setOldText(nodeData[nodeId].label)
+  })
+
+  // useEffect(() => {
+  //   console.log("sortedDependents changed", sortedDependents)
+  //   console.log("nodeId", nodeId)
+  // }, [sortedDependents])
 
   const handleUpdateSwitchChange = event => {
     dispatch(
@@ -75,9 +127,14 @@ const ResizableNode = ({ data }) => {
             tabIndex='0'
             style={{
               padding: 10,
-              cursor: shiftKeyDown ? 'pointer' : 'auto',
+              // cursor: shiftKeyDown ? 'pointer' : 'auto',
+              cursor: 'pointer',
               border:
-                nodeData[nodeId]['selected'] === true ? 'solid green' : '',
+                nodeData[nodeId]['selected'] === true
+                  ? 'solid green'
+                  : sortedDependents.includes(nodeId)
+                  ? 'solid yellow'
+                  : '',
               borderRadius: 4,
               borderWidth: 5
             }}
@@ -93,8 +150,12 @@ const ResizableNode = ({ data }) => {
               }
             }}
             onClick={e => {
-              const key = flowEditorNodeMapping[nodeId]
-              dispatch(setNodeSelected(key))
+              if (!updateModalOpen) {
+                const key = flowEditorNodeMapping[nodeId]
+                dispatch(setNodeSelected(key))
+                console.log(`node ${nodeId} selected`)
+              }
+              editor.setEditable(false)
             }}
           >
             <Box style={{ alignItems: 'center' }}>
@@ -128,11 +189,13 @@ const ResizableNode = ({ data }) => {
                     <Typography variant='body1' style={{ fontSize: 20 }}>
                       {nodeData[nodeId].label}
                     </Typography>
-                    <Tooltip title='Edit'>
-                      <IconButton onClick={() => setIsEditing(true)}>
-                        <EditIcon />
-                      </IconButton>
-                    </Tooltip>
+                    {!updateModalOpen && (
+                      <Tooltip title='Edit'>
+                        <IconButton onClick={() => setIsEditing(true)}>
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
+                    )}
                   </Box>
                 ) : (
                   <Box>
@@ -144,12 +207,10 @@ const ResizableNode = ({ data }) => {
                       value={nodeData[nodeId].label}
                       onChange={event =>
                         dispatch(
-                          setNodeData({
-                            id: nodeId,
-                            data: {
-                              label: event.target.value,
-                              type: nodeData[nodeId].type
-                            }
+                          setNodeDataAttribute({
+                            nodeKey: nodeId,
+                            attribute: 'label',
+                            value: event.target.value
                           })
                         )
                       }
@@ -157,10 +218,22 @@ const ResizableNode = ({ data }) => {
                       onKeyDown={event => {
                         if (event.key === 'Enter') {
                           setIsEditing(false)
+                          console.log('update Modal gonna be open')
+                          dispatch(
+                            setDepGraphNodeAttribute({
+                              nodeKey: nodeId,
+                              attribute: 'prompt',
+                              value: nodeData[nodeId].label
+                            })
+                          )
+                          if (!updateModalOpen && isLazyUpdate === false) {
+                            dispatch(setCurModifiedFlowNodeKey(nodeId))
+                            dispatch(setUpdateModalOpen())
+                          }
                         }
                       }}
                     />
-                    <FormGroup
+                    {/* <FormGroup
                       sx={{
                         mt: 2,
                         mb: 2,
@@ -182,10 +255,20 @@ const ResizableNode = ({ data }) => {
                         }
                         label='Update generation'
                       />
-                    </FormGroup>
-                    <Button variant='contained' onClick={onFinishButtonClick}>
-                      Done
-                    </Button>
+                    </FormGroup> */}
+                    <Box
+                      sx={{
+                        mt: 2,
+                        mb: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <Button variant='contained' onClick={onFinishButtonClick}>
+                        Done
+                      </Button>
+                    </Box>
                   </Box>
                 )}
               </Box>

@@ -25,6 +25,7 @@ import type {
       ids: Array<string>;
       type: 'textBlock';
       version: 1;
+      key: string;
     },
     SerializedElementNode
   >;
@@ -43,9 +44,10 @@ import type {
       return new TextBlockNode(Array.from(node.__ids), node.__key);
     }
   
-    static importDOM(): null {
-      return null;
-    }
+    // static importDOM(serializedNode) {
+    //   const node = $createTextBlockNode(serializedNode.ids);
+    //   return node
+    // }
   
     static importJSON(serializedNode: SerializedTextBlockNode): TextBlockNode {
       const node = $createTextBlockNode(serializedNode.ids);
@@ -58,6 +60,7 @@ import type {
     exportJSON(): SerializedTextBlockNode {
       return {
         ...super.exportJSON(),
+        key: this.__key,
         ids: this.getIDs(),
         type: 'textBlock',
         version: 1,

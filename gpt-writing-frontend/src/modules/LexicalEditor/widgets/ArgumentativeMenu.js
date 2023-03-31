@@ -24,14 +24,14 @@ import {
   ELABORATE_COMMAND,
   ADD_EXAMPLE_COMMAND,
   REWRITE_COMMAND,
-  ARGUMENTATIVE_COMMAND,
   SHOW_WEAKNESS_COMMAND,
   SHOW_SUPPORT_COMMAND,
   SHOW_DEPENDENCY_COMMAND,
   SHOW_COUNTER_ARGUMENT_COMMAND,
   lowPriority,
   highPriority,
-  EVIDENCE_COMMAND
+  EVIDENCE_COMMAND,
+  ARGUMENTATIVE_COMMAND
 } from '../commands/SelfDefinedCommands'
 import { $createHighlightDepNode } from '../nodes/HighlightDepNode'
 import { $isTextBlockNode } from '../nodes/TextBlockNode'
@@ -43,18 +43,22 @@ import {
   setSelectedSent
 } from '../slices/EditorSlice'
 import { useDispatch, useSelector } from 'react-redux'
-import { setNodeSelected } from '../slices/FlowSlice'
+import { setNodeSelected, logInteractionData } from '../slices/FlowSlice'
 import { Divider } from '@mui/material'
 import { Stack } from '@mui/system'
 
-export function TextBlockMenu ({ editor }) {
+export function ArgumentativeMenu ({ editor }) {
   const buttonRef = useRef(null)
   const dispatch = useDispatch()
   const nodeData = useSelector(state => state.flow.nodeData)
+  const [isMenuOpen, setMenuOpen] = useState(false)
   const curSelectedNodeKey = useSelector(
     state => state.editor.curSelectedNodeKey
   )
   const isCurNodeEditable = useSelector(state => state.editor.isCurNodeEditable)
+
+  const username = useSelector(state => state.editor.username)
+  const sessionId = useSelector(state => state.editor.sessionId)
 
   // const showDependencies = useCallback(() => {
   //   const selection = $getSelection()
@@ -73,66 +77,27 @@ export function TextBlockMenu ({ editor }) {
   // }, [editor])
 
   // callback updating floating button position
-  const updateTextBlockMenu = useCallback(() => {
+  const updateArgumentativeMenu = useCallback(() => {
     const selection = $getSelection()
-
-    console.log('[textblock menu] updateTextBlockMenu called')
-
-    if (selection === null) {
-      console.log('[textblock menu] selection is null')
-      return
-    }
-
-    const children = selection.getNodes()
-
-    if ($isHighlightDepNode(children[0])) {
-      // dispatch(setCurSelectedNodeKey(children[0].__key))
-      dispatch(setSelectedSent(children[0].getTextContent()))
-    }
-
-    const buttonElem = buttonRef.current
+    const modalElem = buttonRef.current
     const nativeSelection = window.getSelection()
-    let hasHighlightDepNode = false
 
-    if (children[0].__key === curSelectedNodeKey && isCurNodeEditable) {
-      console.log(
-        'curSelectedNodeKey, nodeKey, isCurEditable: ',
-        curSelectedNodeKey,
-        children[0].__key,
-        isCurNodeEditable
-      )
-      console.log('gonna hide the text block menu')
-      positionFloatingButton(buttonElem, null)
-      return
-    }
-
-    children.map(child => {
-      if ($isHighlightDepNode(child)) {
-        hasHighlightDepNode = true
-      }
-    })
-
-    if (buttonElem === null) {
+    if (modalElem === null) {
       return
     }
 
     const rootElement = editor.getRootElement()
 
-    if (
+    const condition =
       selection != null &&
-      selection.anchor.offset === selection.focus.offset &&
-      hasHighlightDepNode &&
-      // !nativeSelection.isCollapsed &&
       rootElement != null &&
-      rootElement.contains(nativeSelection.anchorNode)
-    ) {
-      console.log('text menu shown')
-      console.log(
-        'curSelectedNodeKey and nodeKey: ',
-        curSelectedNodeKey,
-        children[0].__key
-      )
+      rootElement.contains(nativeSelection.anchorNode) &&
+      isMenuOpen
 
+    // console.log('[condition] isMenuOpen is ', isMenuOpen)
+    // console.log('Whole condition is ', condition)
+
+    if (condition) {
       const domRange = nativeSelection.getRangeAt(0)
       let rect
       if (nativeSelection.anchorNode === rootElement) {
@@ -144,14 +109,16 @@ export function TextBlockMenu ({ editor }) {
       } else {
         rect = domRange.getBoundingClientRect()
       }
-      // editor.setEditable(false)
-      positionFloatingButton(buttonElem, rect)
+
+      console.log('show rewrite modal')
+      positionFloatingButton(modalElem, rect)
     } else {
-      positionFloatingButton(buttonElem, null)
+      // console.log(`[updateFloatingGroup]: element is inactive, isElaborate: ${isElaborate}`)
+      positionFloatingButton(modalElem, null)
     }
 
     return true
-  }, [editor, curSelectedNodeKey, isCurNodeEditable])
+  }, [editor, isMenuOpen])
 
   useEffect(() => {
     const buttonElem = buttonRef.current
@@ -161,27 +128,34 @@ export function TextBlockMenu ({ editor }) {
     // })
 
     return mergeRegister(
-      // editor.registerUpdateListener(({ editorState }) => {
-      //   editorState.read(() => {
-      //     // updateTextBlockMenu()
-      //   })
-      // }),
+      editor.registerCommand(
+        ARGUMENTATIVE_COMMAND,
+        () => {
+          setMenuOpen(true)
+          console.log('rewrite set to true')
+          updateArgumentativeMenu()
+          return true
+        },
+        lowPriority
+      ),
 
       editor.registerCommand(
         SELECTION_CHANGE_COMMAND,
         () => {
-          const selection = $getSelection()
-          const nodes = selection.getNodes()
-          const node = nodes[0]
-          // dispatch(setCurSelectedNodeKey(node.__key))
-          console.log('[textblock menu] selection changed')
-          updateTextBlockMenu()
-          return false
+          // console.log("[rewriteModal]: selection changed")
+          setMenuOpen(false)
+          updateArgumentativeMenu()
         },
-        highPriority
+        lowPriority
       )
     )
-  }, [editor, updateTextBlockMenu])
+  }, [editor, updateArgumentativeMenu])
+
+  useEffect(() => {
+    editor.update(() => {
+      updateArgumentativeMenu()
+    })
+  }, [editor, isMenuOpen])
 
   // useEffect(() => {
   //   editor.update(() => {
@@ -199,18 +173,61 @@ export function TextBlockMenu ({ editor }) {
             const selection = $getSelection()
             const nodes = selection.getNodes()
             const node = nodes[0]
+            console.log(
+              '[counter argument button] current node key:',
+              node.__key
+            )
             dispatch(setCurSelectedNodeKey(node.__key))
             dispatch(setNodeSelected(node.__key))
-            editor.dispatchCommand(REWRITE_COMMAND, null)
+            editor.dispatchCommand(SHOW_COUNTER_ARGUMENT_COMMAND, null)
             positionFloatingButton(buttonRef.current, null)
+
+            dispatch(
+              logInteractionData({
+                username: username,
+                sessionId: sessionId,
+                type: 'counterArgument',
+                interactionData: {
+                  textNodeKey: node.__key,
+                  oldContent: node.getTextContent()
+                }
+              })
+            )
           })
         }}
       >
-        Edit
+        Counter Arguments
       </button>
-
       <Divider orientation='vertical' />
+      <button
+        className='float-item'
+        onClick={() => {
+          editor.update(() => {
+            const selection = $getSelection()
+            const nodes = selection.getNodes()
+            const node = nodes[0]
+            console.log('[weaknesses button] current node key:', node.__key)
+            dispatch(setCurSelectedNodeKey(node.__key))
+            editor.dispatchCommand(SHOW_WEAKNESS_COMMAND, null)
+            positionFloatingButton(buttonRef.current, null)
 
+            dispatch(
+              logInteractionData({
+                username: username,
+                sessionId: sessionId,
+                type: 'logicalWeakness',
+                interactionData: {
+                  textNodeKey: node.__key,
+                  oldContent: node.getTextContent()
+                }
+              })
+            )
+          })
+        }}
+      >
+        Logical weaknesses
+      </button>
+      <Divider orientation='vertical' />
       <button
         className='float-item'
         onClick={() => {
@@ -219,13 +236,24 @@ export function TextBlockMenu ({ editor }) {
             const nodes = selection.getNodes()
             const node = nodes[0]
             dispatch(setCurSelectedNodeKey(node.__key))
-            dispatch(setNodeSelected(node.__key))
-            editor.dispatchCommand(ARGUMENTATIVE_COMMAND, null)
+            editor.dispatchCommand(SHOW_SUPPORT_COMMAND, null)
             positionFloatingButton(buttonRef.current, null)
+
+            dispatch(
+              logInteractionData({
+                username: username,
+                sessionId: sessionId,
+                type: 'supportingEvidence',
+                interactionData: {
+                  textNodeKey: node.__key,
+                  oldContent: node.getTextContent()
+                }
+              })
+            )
           })
         }}
       >
-        Argumentative sparks
+        Supporting evidences
       </button>
     </div>
   )

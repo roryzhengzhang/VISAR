@@ -29,10 +29,11 @@ import Drawer from '@mui/material/Drawer'
 import AutoLinkPlugin from './plugins/AutoLinkPlugin'
 import './styles.css'
 import { styled, useTheme } from '@mui/material/styles'
-import { $getSelection, ParagraphNode, TextNode, $getNodeByKey } from 'lexical'
+import { $getSelection, ParagraphNode, TextNode, $getNodeByKey, RootNode, LineBreakNode } from 'lexical'
 import LoadingPlugin from './plugins/LoadingPlugin'
 import { HighlightDepNode } from './nodes/HighlightDepNode'
 import ReactFlowModal from './widgets/ReactFlowModal'
+import SaveModal from './widgets/SaveModal'
 import { useSelector, useDispatch } from 'react-redux'
 import Box from '@mui/material/Box'
 import { useLocation } from 'react-router-dom'
@@ -43,7 +44,10 @@ import {
   setCurClickedNodeKey,
   setCurSelectedNodeKey,
   setIsCurNodeEditable,
-  setStudyCondition
+  setStudyCondition,
+  setUsername,
+  setSessionId,
+  setTaskDescription
 } from './slices/EditorSlice'
 import { setNodeSelected } from './slices/FlowSlice'
 import SeeAlternativeModal from './widgets/SeeAlternativeModal'
@@ -53,6 +57,8 @@ import RefineModal from './widgets/RefineModal'
 import ReactFlow, { useReactFlow, ReactFlowProvider } from 'reactflow'
 import UpdateModal from './widgets/UpdateModal'
 import { useEffect } from 'react'
+import ManualAddNodeModal from './widgets/ManualAddNodeModal'
+import TaskDescriptionPlugin from './plugins/TaskDescriptionPlugin'
 
 function Placeholder () {
   return <div className='editor-placeholder'>Enter some rich text...</div>
@@ -145,8 +151,14 @@ export default function Editor () {
 
   useEffect(() => {
     console.log('set condition', location.state.condition)
-    if (location.state.condition !== null && location.state.condition !== undefined) {
+    if (
+      location.state.condition !== null &&
+      location.state.condition !== undefined
+    ) {
       dispatch(setStudyCondition(location.state.condition))
+      dispatch(setUsername(location.state.username))
+      dispatch(setSessionId(location.state.sessionId))
+      dispatch(setTaskDescription(location.state.taskDescription))
     }
   }, [location])
 
@@ -166,7 +178,8 @@ export default function Editor () {
                 placeholder={<Placeholder />}
               />
               <HistoryPlugin />
-              <TreeViewPlugin />
+              <TaskDescriptionPlugin />
+              {/* <TreeViewPlugin /> */}
               {/* <ReactFlowPlugin /> */}
               <AutoFocusPlugin />
               <CodeHighlightPlugin />
@@ -174,6 +187,17 @@ export default function Editor () {
               <EditablePlugin />
               <LinkPlugin />
               <AutoLinkPlugin />
+              <NodeEventPlugin 
+                nodeType={LineBreakNode}
+                eventType={'click'}
+                eventListener={(e, editor, key) => {
+                  console.log('line break clicked')
+                  editor.setEditable(true)
+                  const selection = $getSelection()
+                  const child = selection.getNodes()[0]
+                  dispatch(setCurClickedNodeKey(child.__key))
+                }}
+              />
               <NodeEventPlugin
                 nodeType={TextNode}
                 eventType={'click'}
@@ -184,6 +208,7 @@ export default function Editor () {
                     console.log('text node clicked', child.__key)
                     // curClickedNodeKey is used to navigate the focus of the react flow to the corresponding node
                     dispatch(setCurClickedNodeKey(child.__key))
+                    // dispatch(setCurClickedNodeKey(''))
                     editor.setEditable(true)
                     editor.focus()
                   })
@@ -197,6 +222,12 @@ export default function Editor () {
                   // console.log('flow viewport', flowInstance.getViewport())
 
                   editor.update(() => {
+
+                    if ($getNodeByKey(key) === null || $getNodeByKey(key) === undefined) {
+                      console.log()
+                      return
+                    }
+
                     const selection = $getSelection()
                     const child = selection.getNodes()[0]
                     dispatch(setCurClickedNodeKey(child.__key))
@@ -220,7 +251,7 @@ export default function Editor () {
                           lastSelectedNode !== undefined
                         ) {
                           lastSelectedNode.setStyle(
-                            'background-color: #bde0fe;'
+                            'background-color: #f9c74f;'
                           )
                         }
                       }
@@ -258,6 +289,8 @@ export default function Editor () {
         <RefineModal />
         <FixWeaknessModal />
         <UpdateModal />
+        <ManualAddNodeModal />
+        <SaveModal />
       </LexicalComposer>
     </Box>
   )

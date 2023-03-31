@@ -3,7 +3,9 @@ import { useSelector, useDispatch } from 'react-redux'
 import {
   setEdgeData,
   setDepGraphNodeAttribute,
-  setNodeDataAttribute
+  setNodeDataAttribute,
+  setCurModifiedFlowNodeKey,
+  logInteractionData
 } from '../../LexicalEditor/slices/FlowSlice'
 import {
   EdgeProps,
@@ -17,6 +19,11 @@ import MenuItem from '@mui/material/MenuItem'
 import FormControl from '@mui/material/FormControl'
 import Select from '@mui/material/Select'
 import { NodeEdgeTypeMapping } from '../../LexicalEditor/slices/FlowSlice'
+import {
+  setIsReactFlowInModal,
+  setUpdateModalOpen
+} from '../../LexicalEditor/slices/EditorSlice'
+import { useEffect } from 'react'
 
 const CustomEdge = ({
   id,
@@ -43,12 +50,19 @@ const CustomEdge = ({
   const dispatch = useDispatch()
   const edgeData = useSelector(state => state.flow.edgeData)
   const [isEditing, setIsEditing] = React.useState(false)
+  const isReactFlowInModal = useSelector(
+    state => state.editor.isReactFlowInModal
+  )
+  const [oldEdgeType, setOldEdgeType] = React.useState('')
+  const username = useSelector(state => state.editor.username)
+  const sessionId = useSelector(state => state.editor.sessionId)
+  const isLazyUpdate = useSelector(state => state.flow.isLazyUpdate)
 
   const nodeTypeMapping = {
-    "featuredBy": 'K',
-    "elaboratedBy": 'DP',
-    "attackedBy": 'CA',
-    "supportedBy": 'S'
+    featuredBy: 'K',
+    elaboratedBy: 'DP',
+    attackedBy: 'CA',
+    supportedBy: 'S'
   }
 
   const onEdgeTypeChange = e => {
@@ -69,7 +83,29 @@ const CustomEdge = ({
         value: nodeTypeMapping[newType]
       })
     )
+    dispatch(
+      logInteractionData({
+        username: username,
+        sessionId: sessionId,
+        type: 'edge-type-update',
+        interactionData: {
+          targetNodeId: target,
+          oldType: oldEdgeType,
+          newType: newType
+        }
+      })
+    )
+    dispatch(setCurModifiedFlowNodeKey(target))
+    if (isReactFlowInModal === false && isLazyUpdate === false) {
+      console.log('[isReactFlowInModal] is: ', isReactFlowInModal)
+      dispatch(setUpdateModalOpen())
+    }
+    setOldEdgeType(newType)
   }
+
+  useEffect(() => {
+    if (data !== null && data !== undefined) setOldEdgeType(data.type)
+  })
 
   return (
     <>
