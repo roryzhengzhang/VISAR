@@ -9,7 +9,6 @@ from pymongo import MongoClient
 app = Flask(__name__)
 cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
-openai.api_key = "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"
 model_type = "gpt-3.5-turbo"
 tempature = 0.6
 max_tokens = 2048
@@ -20,6 +19,8 @@ client = MongoClient(
     'mongodb+srv://zhengzhang:950117@research.xvi5gpd.mongodb.net/?retryWrites=true&w=majority')
 db = client.gptwriting
 
+with open('openai_key.json') as key_file:
+    openai.api_key = json.load(key_file)['key']
 
 @app.route("/login", methods=["POST"])
 def login():
