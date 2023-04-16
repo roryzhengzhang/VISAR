@@ -174,11 +174,11 @@ export default function Editor () {
             <LoadingPlugin />
             <div className='editor-inner'>
               <RichTextPlugin
-                contentEditable={<ContentEditable className='editor-input' />}
+                contentEditable={<ContentEditable className='editor-input' style={{height: "988px"}} />}
                 placeholder={<Placeholder />}
               />
               <HistoryPlugin />
-              <TaskDescriptionPlugin />
+              {/* <TaskDescriptionPlugin /> */}
               {/* <TreeViewPlugin /> */}
               {/* <ReactFlowPlugin /> */}
               <AutoFocusPlugin />

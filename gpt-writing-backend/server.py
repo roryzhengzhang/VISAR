@@ -9,7 +9,7 @@ from pymongo import MongoClient
 app = Flask(__name__)
 cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
-openai.api_key = "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"
+openai.api_key = "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"
 model_type = "gpt-3.5-turbo"
 tempature = 0.6
 max_tokens = 2048
@@ -133,7 +133,7 @@ def implementCounterArgument(keyword, counterArgument, argumentAttacked):
 
     messages = [
         {"role": "system", "content": "You are a helpful writing assistant focusing on argumentative essay tutoring. You are trying to argue against an argument by considering a provided counter argument."},
-        {"role": "user", "content": f'''Plesae write a paragraph that argues against the argument: "{argumentAttacked}" by considering the following counter argument: "{counterArgument}" from the perspective of {keyword}'''},
+        {"role": "user", "content": f'''Please write a paragraph that argues against the argument: "{argumentAttacked}" by considering the following counter argument: "{counterArgument}" from the perspective of {keyword}'''},
     ]
 
     # prompt = f'''Please list the counter arguments that can challenge the argument: "Houston is a good city because it has a convenient transportaion and afforable living cost"'''
@@ -173,7 +173,7 @@ def generateStartingSentence(keyword, discussionPoints, globalContext):
         return "This is a test mode response (Starting Sentence)"
 
     messages = [
-        {"role": "system", "content": f'''You are a helpful writing assistant focusing on argumentative essay tutoring. You are trying to write a starting sentence of the paragrah that support user's argument from a particular perspective.'''},
+        {"role": "system", "content": f'''You are a helpful writing assistant focusing on argumentative essay tutoring. You are trying to write a starting sentence of the paragraph that support user's argument from a particular perspective.'''},
         {"role": "user", "content": f'''Write a starting sentence for the paragraph that elaborates on the argument {globalContext} from the perspective of {keyword}'''}
     ]
 
