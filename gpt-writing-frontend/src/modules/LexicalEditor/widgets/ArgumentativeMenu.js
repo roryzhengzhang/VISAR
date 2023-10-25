@@ -117,6 +117,8 @@ export function ArgumentativeMenu ({ editor }) {
       positionFloatingButton(modalElem, null)
     }
 
+    console.log('updateArgumentativeMenu called')
+
     return true
   }, [editor, isMenuOpen])
 

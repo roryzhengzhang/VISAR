@@ -233,7 +233,7 @@ export default function UpdateModal () {
         return
       }
 
-      fetch(`http://34.70.132.79:8088/${endpoint}`, {
+      fetch(`http://34.70.132.79/api/${endpoint}`, {
         method: 'POST',
         mode: 'cors',
         headers: {
@@ -408,7 +408,7 @@ export default function UpdateModal () {
 
       console.log("[implementation] params: ", params)
 
-      fetch(`http://34.70.132.79:8088/${endpoint}`, {
+      fetch(`http://34.70.132.79/api/${endpoint}`, {
         method: 'POST',
         mode: 'cors',
         headers: {

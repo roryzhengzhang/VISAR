@@ -22,6 +22,22 @@ db = client.gptwriting
 with open('openai_key.json') as key_file:
     openai.api_key = json.load(key_file)['key']
 
+@app.route("/signup", methods=["POST"])
+def signup():
+    if request.method == "POST":
+        response = request.get_json()
+        username = response["username"]
+        password = response["password"]
+        condition = response["condition"]
+        print(f"username: {username}, password: {password}")
+        user = db.users.find_one({"username": username})
+        if user is not None:
+            # return existing user
+            return jsonify({"status": "success", "message": "Login successfully", "preload": False, "editorState": "", "flowSlice": "", "editorSlice": "", "taskProblem": "", "taskDescription": ""})
+        db.users.insert_one({"username": username, "password": password, "condition": condition, "latestSessionId": -1, "condTopicMapping": {"1": 1, "2": 2, "3": 3, "4": 4, "5": 5}})
+        print("Signup successfully")
+        return jsonify({"status": "success", "message": "Login successfully", "preload": False, "editorState": "", "flowSlice": "", "editorSlice": "", "taskProblem": "", "taskDescription": ""})
+
 @app.route("/login", methods=["POST"])
 def login():
     if request.method == "POST":
@@ -798,7 +814,7 @@ def gpt_counter_argument():
 4. Poor Air Quality: Traffic congestion and other factors can contribute to poor air quality in Houston, which can have negative health effects on residents. This can be a particular concern for vulnerable populations such as children, the elderly, and those with respiratory problems.
 5. Limited Options for Alternative Transportation: While Houston has some options for alternative transportation, such as bike sharing and car sharing programs, these options may not be widely available or accessible to all residents.
 6. Lack of Walkability: Many areas of Houston are designed primarily for cars, which can make it difficult for residents to walk to their destinations. This can limit opportunities for exercise and may contribute to obesity and other health problems.'''},
-            {"role": "user", "content": f'''Please list the counter arguments that can challenge the argument: "{context}" from the perspective of "{keyword}"'''},
+            {"role": "user", "content": f'''Please list the counter arguments that can challenge the argument: "{context}" from the perspective of "{keyword}. Directly list the counter arguments, do not include any prefix sentence."'''},
         ]
 
         response = openai.ChatCompletion.create(
@@ -810,6 +826,9 @@ def gpt_counter_argument():
 
         res = response.choices[0].message.content.strip()
         res = res.strip().splitlines()
+
+        res = [ r for r in res if len(r) > 0 and r[0].isdigit()]
+
         return jsonify({"response": res})
 
 
@@ -998,4 +1017,4 @@ def get_generate_from_sketch():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, port=8088, host="0.0.0.0")
+    app.run(debug=True, port=5000, host="127.0.0.1")

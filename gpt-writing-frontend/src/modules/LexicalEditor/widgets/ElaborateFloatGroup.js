@@ -151,7 +151,7 @@ export default function ElaborateFLoatingGroup({ editor }) {
     // console.log(nodes)
     setPromptedText(selected_text);
     
-    const fetchPromise = fetch('http://34.70.132.79:8088/keyword', {
+    const fetchPromise = fetch('http://34.70.132.79/api/keyword', {
       method: 'POST',
       mode: 'cors',
       headers: {
@@ -180,7 +180,7 @@ export default function ElaborateFLoatingGroup({ editor }) {
     setFetchingAlertOpen(true);
 
     // IP: http://34.70.132.79:8088
-    fetch("http://34.70.132.79:8088/prompts", {
+    fetch("http://34.70.132.79/api/prompts", {
       method: "POST",
       mode: "cors",
       headers: {
@@ -208,7 +208,7 @@ export default function ElaborateFLoatingGroup({ editor }) {
       console.log(`selection: ${selected_text}`);
 
       const fetchPromise = fetch(
-        "http://http://34.70.132.79:8088/?" +
+        "http://http://34.70.132.79/api/?" +
           new URLSearchParams({
             prompt: selected_text,
             mode: "elaborate",

@@ -161,7 +161,7 @@ export default function SupportingEvidenceMenu ({ editor }) {
       }
 
       // IP: http://34.70.132.79:8088
-      fetch('http://34.70.132.79:8088/supportingArguments', {
+      fetch('http://34.70.132.79/api/supportingArguments', {
         method: 'POST',
         mode: 'cors',
         headers: {

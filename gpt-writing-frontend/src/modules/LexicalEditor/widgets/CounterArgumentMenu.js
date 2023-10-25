@@ -170,7 +170,7 @@ export default function CounterArgumentMenu ({ editor }) {
       keyword = depGraph[flowKey]["prompt"]
 
       // IP: http://34.70.132.79:8088
-      fetch('http://34.70.132.79:8088/counterArguments', {
+      fetch('http://34.70.132.79/api/counterArguments', {
         method: 'POST',
         mode: 'cors',
         headers: {

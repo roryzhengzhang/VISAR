@@ -235,7 +235,7 @@ function $updateSelectionResolveTextNodes (selection) {
 export function removeNode (
   nodeToRemove,
   restoreSelection = true,
-  preserveEmptyParent = false
+  preserveEmptyParent = true
 ) {
   // errorOnReadOnly();
   const key = nodeToRemove.__key

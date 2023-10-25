@@ -184,7 +184,7 @@ export default function Editor () {
               <AutoFocusPlugin />
               <CodeHighlightPlugin />
               <ListPlugin />
-              <EditablePlugin />
+              {/* <EditablePlugin /> */}
               <LinkPlugin />
               <AutoLinkPlugin />
               <NodeEventPlugin 

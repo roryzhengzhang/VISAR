@@ -301,9 +301,8 @@ export default function Flow ({ editor, mode, sidebar }) {
             }
           })
 
-          console.log('[onNodeChange] depGraph: ', depGraph)
-
           dispatch(removeNodeFromDepGraph(change.id))
+          console.log('[removeNode] depGraph: ', depGraph)
         }
       })
 

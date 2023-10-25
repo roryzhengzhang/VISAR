@@ -39,7 +39,7 @@ function Copyright (props) {
 const theme = createTheme()
 
 export default function SignIn () {
-  const [cond, setCondition] = React.useState('baseline')
+  const [cond, setCondition] = React.useState('advanced')
   const [username, setUsername] = React.useState('')
   const [password, setPassword] = React.useState('')
   const [status, setStatus] = React.useState('') // [idle, pending, resolved, rejected]
@@ -47,17 +47,8 @@ export default function SignIn () {
 
   const navigate = useNavigate()
 
-  const handleSubmit = event => {
-    event.preventDefault()
-    const data = new FormData(event.currentTarget)
-    console.log({
-      email: data.get('email'),
-      password: data.get('password')
-    })
-  }
-
   async function authenticate () {
-    const res = await fetch('http://34.70.132.79:8088/login', {
+    const res = await fetch('http://34.70.132.79/api/signup', {
       method: 'POST',
       mode: 'cors',
       headers: {
@@ -93,13 +84,22 @@ export default function SignIn () {
           description: taskDescription
         }
 
-        console.log("task: ", task)
+        console.log('task: ', task)
 
         const sessionId = Math.floor(Math.random() * 10000)
 
         if (res.status === 'success') {
           navigate('/editor', {
-            state: { condition: cond, username: username, preload: res.preload, sessionId: sessionId, editorState: editorState, flowSlice: flowSlice, editorSlice: editorSlice, taskDescription: task }
+            state: {
+              condition: 'advanced',
+              username: username,
+              preload: res.preload,
+              sessionId: sessionId,
+              editorState: editorState,
+              flowSlice: flowSlice,
+              editorSlice: editorSlice,
+              taskDescription: task
+            }
           })
         }
       })
@@ -107,29 +107,35 @@ export default function SignIn () {
 
   return (
     <ThemeProvider theme={theme}>
-      <Container component='main' maxWidth='xs'>
+      <Container component='main'>
         <CssBaseline />
         <Box
           sx={{
-            marginTop: 8,
+            marginTop: 15,
             display: 'flex',
             flexDirection: 'column',
-            alignItems: 'center'
+            alignItems: 'center',
+            justifyContent: 'center'
           }}
         >
-          <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
+          {/* <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
             <LockOutlinedIcon />
-          </Avatar>
+          </Avatar> */}
           <Typography component='h1' variant='h5'>
-            Sign in
+            Welcome to VISAR 👋
           </Typography>
-          <Box sx={{ mt: 1 }}>
+          <Box
+            sx={{
+              mt: 2,
+              width: "35%"
+            }}
+          >
             <TextField
               margin='normal'
               required
               fullWidth
               id='username'
-              label='Username'
+              label='Please enter a nickname'
               value={username}
               onFocus={() => {
                 setStatus('idle')
@@ -140,7 +146,7 @@ export default function SignIn () {
               }}
               autoFocus
             />
-            <TextField
+            {/* <TextField
               margin='normal'
               required
               fullWidth
@@ -156,8 +162,8 @@ export default function SignIn () {
               type='password'
               id='password'
               //   autoComplete="current-password"
-            />
-            <RadioGroup
+            /> */}
+            {/* <RadioGroup
               aria-labelledby='condition-radio-buttons-group-label'
               value={cond}
               onChange={e => {
@@ -180,7 +186,7 @@ export default function SignIn () {
                 control={<Radio />}
                 label='Orange version'
               />
-            </RadioGroup>
+            </RadioGroup> */}
             <Button
               type='submit'
               fullWidth
@@ -188,7 +194,7 @@ export default function SignIn () {
               sx={{ mt: 3, mb: 2 }}
               onClick={authenticate}
             >
-              Log in
+              Enter
             </Button>
             {status === 'fail' && message === 'Password incorrect' && (
               <Typography sx={{ color: 'red' }}>Password incorrect</Typography>

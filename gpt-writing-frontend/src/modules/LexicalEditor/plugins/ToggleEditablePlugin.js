@@ -13,13 +13,13 @@ export default function ToggleEditablePlugin () {
     state => state.editor.curSelectedNodeKey
   )
 
-  editor.registerNodeTransform(TextBlockNode, tbNode => {
-    // if( tbNode.__key == curSelectedNodeKey ) {
-    //   edtior.setEditable(true)
-    // } else {
-    //   editor.setEditable(false)
-    // }
-  })
+  // editor.registerNodeTransform(TextBlockNode, tbNode => {
+  //   // if( tbNode.__key == curSelectedNodeKey ) {
+  //   //   edtior.setEditable(true)
+  //   // } else {
+  //   //   editor.setEditable(false)
+  //   // }
+  // })
 
   return null
 }

@@ -47,7 +47,7 @@ export const logInteractionData = createAsyncThunk(
   'flow/logInteractionData',
   async (args, { getState }) => {
 
-    const res = await fetch('http://34.70.132.79:8088/logInteractionData', {
+    const res = await fetch('http://34.70.132.79/api/logInteractionData', {
       method: 'POST',
       mode: 'cors',
       headers: {
@@ -91,7 +91,7 @@ export const generateFromDepGraph = createAsyncThunk(
       }
     }
 
-    const res = await fetch('http://34.70.132.79:8088/generateFromDepGraph', {
+    const res = await fetch('http://34.70.132.79/api/generateFromDepGraph', {
       method: 'POST',
       mode: 'cors',
       headers: {
@@ -120,7 +120,7 @@ export const generateFromSketch = createAsyncThunk(
   async (editor, { getState }) => {
     const state = getState()
 
-    const res = await fetch('http://34.70.132.79:8088/generateFromSketch', {
+    const res = await fetch('http://34.70.132.79/api/generateFromSketch', {
       method: 'POST',
       mode: 'cors',
       headers: {

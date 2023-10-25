@@ -781,7 +781,7 @@ export default function ToolbarPlugin () {
               aria-label='Load Draft'
               onClick={() => {
                 editor.update(() => {
-                  const res = fetch('http://34.70.132.79:8088/loadDraft', {
+                  const res = fetch('http://34.70.132.79/api/loadDraft', {
                     method: 'POST',
                     mode: 'cors',
                     headers: {
@@ -825,7 +825,7 @@ export default function ToolbarPlugin () {
                   console.log('flowSlice: ', flowSlice)
                   console.log('editorSlice: ', editorSlice)
 
-                  const res = fetch('http://34.70.132.79:8088/saveDraft', {
+                  const res = fetch('http://34.70.132.79/api/saveDraft', {
                     method: 'POST',
                     mode: 'cors',
                     headers: {
