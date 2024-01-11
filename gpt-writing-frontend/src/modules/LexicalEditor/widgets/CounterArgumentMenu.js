@@ -169,8 +169,8 @@ export default function CounterArgumentMenu ({ editor }) {
 
       keyword = depGraph[flowKey]["prompt"]
 
-      // IP: http://34.70.132.79:8088
-      fetch('http://34.70.132.79/api/counterArguments', {
+      // IP: https://visar.app:8088
+      fetch('https://visar.app/api/counterArguments', {
         method: 'POST',
         mode: 'cors',
         headers: {

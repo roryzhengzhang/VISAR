@@ -42,7 +42,7 @@ export const generateRewrite = createAsyncThunk(
     // const state = getState();
     console.log("[generateRewrite] args:", args)
     // const { basePrompt, mode, furInstruction, curSent } = args;
-    const res = await fetch("http://34.70.132.79/api/rewrite", {
+    const res = await fetch("https://visar.app/api/rewrite", {
       method: "POST",
       mode: "cors",
       headers: {

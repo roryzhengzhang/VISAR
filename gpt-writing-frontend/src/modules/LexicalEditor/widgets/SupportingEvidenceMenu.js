@@ -160,8 +160,8 @@ export default function SupportingEvidenceMenu ({ editor }) {
         console.log("flowKey: ", flowKey)
       }
 
-      // IP: http://34.70.132.79:8088
-      fetch('http://34.70.132.79/api/supportingArguments', {
+      // IP: https://visar.app:8088
+      fetch('https://visar.app/api/supportingArguments', {
         method: 'POST',
         mode: 'cors',
         headers: {

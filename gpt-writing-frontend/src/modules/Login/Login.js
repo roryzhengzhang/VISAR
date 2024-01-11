@@ -48,7 +48,7 @@ export default function SignIn () {
   const navigate = useNavigate()
 
   async function authenticate () {
-    const res = await fetch('http://34.70.132.79/api/signup', {
+    const res = await fetch('https://visar.app/api/signup', {
       method: 'POST',
       mode: 'cors',
       headers: {
