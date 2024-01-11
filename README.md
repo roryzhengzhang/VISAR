@@ -15,4 +15,4 @@ Go to folder **gpt-writing-backend**. Please run the back-end server by executin
     key: "Your OpenAI key"
 }
 ```
-Similarly, create a file called "gpt-writing-backend/mongoDB_key.json" and store your MongoDB key in the same form. You need to create a new mongoDB database called "gptwriting", and create collections called "users" and "interactionData" in the database.
+Similarly, create a file called **gpt-writing-backend/mongoDB_key.json** and store your MongoDB key in the same form. You need to create a new mongoDB database called "gptwriting", and create collections called "users" and "interactionData" in the database.
