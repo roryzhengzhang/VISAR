@@ -15,12 +15,17 @@ max_tokens = 2048
 enablePreload = False
 test = False
 
-client = MongoClient(
-    'mongodb+srv://zhengzhang:950117@research.xvi5gpd.mongodb.net/?retryWrites=true&w=majority')
-db = client.gptwriting
-
 with open('openai_key.json') as key_file:
     openai.api_key = json.load(key_file)['key']
+
+with open('mongoDB_key.json') as key_file:
+    mongoDB_key = json.load(key_file)['key']
+
+# Update your mongoDB key here. You need to create a new mongoDB database called "gptwriting", and create collections called "users" and "interactionData" in the database.
+client = MongoClient(mongoDB_key)
+db = client.gptwriting
+
+
 
 @app.route("/signup", methods=["POST"])
 def signup():
@@ -38,6 +43,7 @@ def signup():
         print("Signup successfully")
         return jsonify({"status": "success", "message": "Login successfully", "preload": False, "editorState": "", "flowSlice": "", "editorSlice": "", "taskProblem": "", "taskDescription": ""})
 
+# Only for user logging purpose
 @app.route("/login", methods=["POST"])
 def login():
     if request.method == "POST":

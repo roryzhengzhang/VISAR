@@ -6144,3 +6144,31 @@ Signup successfully
 127.0.0.1 - - [10/Jan/2024 21:24:56] "OPTIONS /signup HTTP/1.0" 200 -
 127.0.0.1 - - [10/Jan/2024 21:24:56] "POST /signup HTTP/1.0" 200 -
 127.0.0.1 - - [11/Jan/2024 08:37:43] "[33mPOST /v0/id HTTP/1.0[0m" 404 -
+ * Detected change in '/home/zhengzhang/gpt-writing/gpt-writing-backend/server.py', reloading
+username: test123, password: 
+username: Patrick, password: 
+Signup successfully
+username: Nate, password: 
+Signup successfully
+response:  {'basePrompt': '', 'curSent': 'The introduction of the new node in the network infrastructure significantly improves the overall efficiency and functionality of the system.', 'mode': 'alternative', 'furInstruction': ''}
+[rewrite] request:  {'basePrompt': '', 'curSent': 'The introduction of the new node in the network infrastructure significantly improves the overall efficiency and functionality of the system.', 'mode': 'alternative', 'furInstruction': ''}
+[/rewrite] prompt: Rephrase the following sentence in a different way: The introduction of the new node in the network infrastructure significantly improves the overall efficiency and functionality of the system.
+fix res: ["The system's overall efficiency and functionality are significantly enhanced by the addition of the new node to the network infrastructure.", "The system's overall efficiency and functionality are greatly enhanced by the addition of the new node to the network infrastructure.", "The system's overall efficiency and functionality are significantly enhanced by the introduction of the new node in the network infrastructure.", "The system's overall efficiency and functionality are greatly enhanced with the addition of the new node to the network infrastructure.", "The system's overall efficiency and functionality are greatly enhanced by the addition of the new node to the network infrastructure.", "The system's overall efficiency and functionality are greatly enhanced by the addition of the new node to the network infrastructure.", "The system's overall efficiency and functionality are greatly enhanced by the addition of the new node in the network infrastructure.", "The system's overall efficiency and functionality are greatly enhanced by the addition of the new node to the network infrastructure."]
+username: Nate, password: 
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 749-382-305
+ * Detected change in '/home/zhengzhang/gpt-writing/gpt-writing-backend/server.py', reloading
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 749-382-305
+ * Detected change in '/home/zhengzhang/gpt-writing/gpt-writing-backend/server.py', reloading
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 749-382-305
+ * Detected change in '/home/zhengzhang/gpt-writing/gpt-writing-backend/server.py', reloading
+ * Restarting with stat
+Traceback (most recent call last):
+  File "/home/zhengzhang/gpt-writing/gpt-writing-backend/server.py", line 19, in <module>
+    if logging == True:
+NameError: name 'logging' is not defined
