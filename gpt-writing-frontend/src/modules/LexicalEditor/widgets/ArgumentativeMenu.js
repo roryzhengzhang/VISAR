@@ -110,14 +110,14 @@ export function ArgumentativeMenu ({ editor }) {
         rect = domRange.getBoundingClientRect()
       }
 
-      console.log('show rewrite modal')
+      // console.log('show rewrite modal')
       positionFloatingButton(modalElem, rect)
     } else {
       // console.log(`[updateFloatingGroup]: element is inactive, isElaborate: ${isElaborate}`)
       positionFloatingButton(modalElem, null)
     }
 
-    console.log('updateArgumentativeMenu called')
+    // console.log('updateArgumentativeMenu called')
 
     return true
   }, [editor, isMenuOpen])
@@ -134,7 +134,7 @@ export function ArgumentativeMenu ({ editor }) {
         ARGUMENTATIVE_COMMAND,
         () => {
           setMenuOpen(true)
-          console.log('rewrite set to true')
+          // console.log('rewrite set to true')
           updateArgumentativeMenu()
           return true
         },
@@ -175,10 +175,10 @@ export function ArgumentativeMenu ({ editor }) {
             const selection = $getSelection()
             const nodes = selection.getNodes()
             const node = nodes[0]
-            console.log(
-              '[counter argument button] current node key:',
-              node.__key
-            )
+            // console.log(
+            //   '[counter argument button] current node key:',
+            //   node.__key
+            // )
             dispatch(setCurSelectedNodeKey(node.__key))
             dispatch(setNodeSelected(node.__key))
             editor.dispatchCommand(SHOW_COUNTER_ARGUMENT_COMMAND, null)
@@ -208,7 +208,7 @@ export function ArgumentativeMenu ({ editor }) {
             const selection = $getSelection()
             const nodes = selection.getNodes()
             const node = nodes[0]
-            console.log('[weaknesses button] current node key:', node.__key)
+            // console.log('[weaknesses button] current node key:', node.__key)
             dispatch(setCurSelectedNodeKey(node.__key))
             editor.dispatchCommand(SHOW_WEAKNESS_COMMAND, null)
             positionFloatingButton(buttonRef.current, null)

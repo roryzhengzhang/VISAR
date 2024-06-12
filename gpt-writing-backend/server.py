@@ -9,7 +9,7 @@ from pymongo import MongoClient
 app = Flask(__name__)
 cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
-model_type = "gpt-3.5-turbo"
+model_type = "gpt-4o"
 tempature = 0.6
 max_tokens = 2048
 enablePreload = False

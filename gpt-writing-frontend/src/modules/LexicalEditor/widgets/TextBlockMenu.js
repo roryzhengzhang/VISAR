@@ -76,10 +76,10 @@ export function TextBlockMenu ({ editor }) {
   const updateTextBlockMenu = useCallback(() => {
     const selection = $getSelection()
 
-    console.log('[textblock menu] updateTextBlockMenu called')
+    // console.log('[textblock menu] updateTextBlockMenu called')
 
     if (selection === null) {
-      console.log('[textblock menu] selection is null')
+      // console.log('[textblock menu] selection is null')
       return
     }
 
@@ -95,13 +95,13 @@ export function TextBlockMenu ({ editor }) {
     let hasHighlightDepNode = false
 
     if (children[0].__key === curSelectedNodeKey && isCurNodeEditable) {
-      console.log(
-        'curSelectedNodeKey, nodeKey, isCurEditable: ',
-        curSelectedNodeKey,
-        children[0].__key,
-        isCurNodeEditable
-      )
-      console.log('gonna hide the text block menu')
+      // console.log(
+      //   'curSelectedNodeKey, nodeKey, isCurEditable: ',
+      //   curSelectedNodeKey,
+      //   children[0].__key,
+      //   isCurNodeEditable
+      // )
+      // console.log('gonna hide the text block menu')
       positionFloatingButton(buttonElem, null)
       return
     }
@@ -126,12 +126,12 @@ export function TextBlockMenu ({ editor }) {
       rootElement != null &&
       rootElement.contains(nativeSelection.anchorNode)
     ) {
-      console.log('text menu shown')
-      console.log(
-        'curSelectedNodeKey and nodeKey: ',
-        curSelectedNodeKey,
-        children[0].__key
-      )
+      // console.log('text menu shown')
+      // console.log(
+      //   'curSelectedNodeKey and nodeKey: ',
+      //   curSelectedNodeKey,
+      //   children[0].__key
+      // )
 
       const domRange = nativeSelection.getRangeAt(0)
       let rect
@@ -174,7 +174,7 @@ export function TextBlockMenu ({ editor }) {
           const nodes = selection.getNodes()
           const node = nodes[0]
           // dispatch(setCurSelectedNodeKey(node.__key))
-          console.log('[textblock menu] selection changed')
+          // console.log('[textblock menu] selection changed')
           updateTextBlockMenu()
           return false
         },
