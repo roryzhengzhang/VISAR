@@ -21,6 +21,7 @@ import { $isHighlightDepNode } from '../nodes/HighlightDepNode'
 import PublishedWithChangesIcon from '@mui/icons-material/PublishedWithChanges'
 import AutorenewIcon from '@mui/icons-material/Autorenew'
 import { setNodeSelected } from '../slices/FlowSlice'
+import React from "react";
 
 const style = {
   position: 'absolute',

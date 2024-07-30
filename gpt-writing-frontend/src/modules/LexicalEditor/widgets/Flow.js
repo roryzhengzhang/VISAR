@@ -165,11 +165,13 @@ export default function Flow ({ editor, mode, sidebar }) {
       const { depGraph, rootFlowKeys, nodeMappings } = action.payload
       editor.update(() => {
         console.log('[onGenerationClick] depGraph:', depGraph)
+        // before this, the text is not updated in the editor
+        // this means the text node should be created and the flowEditorNodeMapping should be updated
         const { updatedMappings, updatedGraph } = addGenartionsToEditor(
           depGraph,
           rootFlowKeys,
           nodeMappings
-        )
+        ) // use DFS to add generation text to the text node
         editor.dispatchCommand(SHOW_LOADING_COMMAND, { show: false })
         dispatch(extendFlowEditorNodeMapping(updatedMappings))
         dispatch(extendDepGraph(updatedGraph))
@@ -200,7 +202,8 @@ export default function Flow ({ editor, mode, sidebar }) {
               dispatch(
                 setFlowEditorNodeMapping({
                   flowKey: oldFlowKey,
-                  EditorKey: hlNode.__key
+                  // originally the Text Node key, now change to the Highlight Node key
+                  EditorKey: hlNode.__key 
                 })
               )
             }
@@ -288,7 +291,8 @@ export default function Flow ({ editor, mode, sidebar }) {
       changes.forEach(change => {
         if (change.type === 'remove') {
           const editorNodeKey = nodeMappings[change.id]
-          const nodeToRemove = $getNodeByKey(editorNodeKey)
+          const nodeToRemove = $getNodeByKey(editorNodeKey) // the editor text node
+          console.log("[flow] node to remove is ", nodeToRemove)
           if (nodeToRemove !== null && nodeToRemove !== undefined) {
             removeNode(nodeToRemove)
           }
@@ -302,7 +306,7 @@ export default function Flow ({ editor, mode, sidebar }) {
           })
 
           dispatch(removeNodeFromDepGraph(change.id))
-          console.log('[removeNode] depGraph: ', depGraph)
+          
         }
       })
 
@@ -356,6 +360,7 @@ export default function Flow ({ editor, mode, sidebar }) {
 
       const newViewPoint = { x: -x + 250, y: -y + 500, zoom: 1 }
       console.log('newViewPoint:', newViewPoint)
+      // setViewport is used to move the canvas, NOT the camera
       flowInstance.setViewport(newViewPoint, { duration: 800 })
     }
   }, [curClickedNodeKey])

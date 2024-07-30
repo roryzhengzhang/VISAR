@@ -1,4 +1,4 @@
-import { createSlice, createAsyncThunk, current } from '@reduxjs/toolkit'
+import { createSlice, createAsyncThunk, current } from "@reduxjs/toolkit";
 
 const initialState = {
   flowModalOpen: false,
@@ -15,7 +15,7 @@ const initialState = {
   curSelectedNodeKey: "",
   curClickedNodeKey: "",
   curSelection: "",
-  promptStatus: 'empty',
+  promptStatus: "empty",
   type: "elaborate",
   selectedSent: "",
   curRangeNodeKey: "",
@@ -33,16 +33,17 @@ const initialState = {
   sessionId: "",
   isReactFlowInModal: false,
   isRangeMode: false,
-  taskDescription: null
-}
+  taskDescription: null,
+  totalHightlightNodes: 0,
+};
 
 export const generateRewrite = createAsyncThunk(
   "editor/generateRewrite",
   async (args, { getState }) => {
     // const state = getState();
-    console.log("[generateRewrite] args:", args)
+    console.log("[generateRewrite] args:", args);
     // const { basePrompt, mode, furInstruction, curSent } = args;
-    const res = await fetch("https://visar.app/api/rewrite", {
+    const res = await fetch("http://127.0.0.1:5000/rewrite", {
       method: "POST",
       mode: "cors",
       headers: {
@@ -58,183 +59,262 @@ export const generateRewrite = createAsyncThunk(
 );
 
 const editorSlice = createSlice({
-  name: 'editor',
+  name: "editor",
   initialState,
   reducers: {
-    setFlowModalOpen (state, action) {
+    setEditorSliceStates(state, action) {
+      const {
+        flowModalOpen,
+        alternativeModalOpen,
+        refineModalOpen,
+        fixWeaknessModalOpen,
+        mindmapOpen,
+        selectedKeywords,
+        allKeywords,
+        prompts,
+        counterArguments,
+        selectedCounterArguments,
+        selectedPrompts,
+        curSelectedNodeKey,
+        curClickedNodeKey,
+        curSelection,
+        promptStatus,
+        type,
+        selectedSent,
+        curRangeNodeKey,
+        alterantives,
+        selectedWeaknesses,
+        selectedSupportingArguments,
+        weaknesses,
+        isCurNodeEditable,
+        supportingArguments,
+        condition,
+        updateModalOpen,
+        addNodeModalOpen,
+        saveModalOpen,
+        username,
+        sessionId,
+        isReactFlowInModal,
+        isRangeMode,
+        totalHightlightNodes
+      } = action.payload;
+
+      return {
+        ...state,
+        flowModalOpen: flowModalOpen,
+        alternativeModalOpen: alternativeModalOpen,
+        refineModalOpen: refineModalOpen,
+        fixWeaknessModalOpen: fixWeaknessModalOpen,
+        mindmapOpen: mindmapOpen,
+        selectedKeywords: selectedKeywords,
+        allKeywords: allKeywords,
+        prompts: prompts,
+        counterArguments: counterArguments,
+        selectedCounterArguments: selectedCounterArguments,
+        selectedPrompts: selectedPrompts,
+        curSelectedNodeKey: curSelectedNodeKey,
+        curClickedNodeKey: curClickedNodeKey,
+        curSelection: curSelection,
+        promptStatus: promptStatus,
+        type: type,
+        selectedSent: selectedSent,
+        curRangeNodeKey: curRangeNodeKey,
+        alterantives: alterantives,
+        selectedWeaknesses: selectedWeaknesses,
+        selectedSupportingArguments: selectedSupportingArguments,
+        weaknesses: weaknesses,
+        isCurNodeEditable: isCurNodeEditable,
+        supportingArguments: supportingArguments,
+        condition: condition,
+        updateModalOpen: updateModalOpen,
+        addNodeModalOpen: addNodeModalOpen,
+        saveModalOpen: saveModalOpen,
+        username: username,
+        sessionId: sessionId,
+        totalHightlightNodes: totalHightlightNodes
+      }
+    },
+    increaseTotalHighlightNodes(state, action) {
+      const total = state.totalHightlightNodes
+      return {
+        ...state,
+        totalHightlightNodes: total + 1
+      }
+    },
+    setFlowModalOpen(state, action) {
       // console.log('set Modal Open is called')
       return {
         ...state,
-        flowModalOpen: true
-      }
+        flowModalOpen: true,
+      };
     },
-    setSelectedSent (state, action) {
+    setSelectedSent(state, action) {
       return {
         ...state,
-        selectedSent: action.payload
-      }
+        selectedSent: action.payload,
+      };
     },
-    setRangeGenerationMode (state, action) {
+    setRangeGenerationMode(state, action) {
       return {
         ...state,
-        isRangeMode: action.payload
-      }
+        isRangeMode: action.payload,
+      };
     },
-    setSessionId (state, action) {
+    setSessionId(state, action) {
       return {
         ...state,
-        sessionId: action.payload
-      }
+        sessionId: action.payload,
+      };
     },
-    setUsername (state, action) {
+    setUsername(state, action) {
       return {
         ...state,
-        username: action.payload
-      }
+        username: action.payload,
+      };
     },
-    setIsReactFlowInModal (state, action) {
+    setIsReactFlowInModal(state, action) {
       return {
         ...state,
-        isReactFlowInModal: true
-      }
+        isReactFlowInModal: true,
+      };
     },
-    setType (state, action) {
+    setType(state, action) {
       return {
         ...state,
-        type: action.payload
-      }
+        type: action.payload,
+      };
     },
     setTaskDescription(state, action) {
       return {
         ...state,
-        taskDescription: action.payload
-      }
+        taskDescription: action.payload,
+      };
     },
-    setIsCurNodeEditable (state, action) {
+    setIsCurNodeEditable(state, action) {
       return {
         ...state,
-        isCurNodeEditable: action.payload
-      }
+        isCurNodeEditable: action.payload,
+      };
     },
-    setCurRangeNodeKey (state, action) {
+    setCurRangeNodeKey(state, action) {
       return {
         ...state,
-        curRangeNodeKey: action.payload
-      }
+        curRangeNodeKey: action.payload,
+      };
     },
-    setCurClickedNodeKey (state, action) {
+    setCurClickedNodeKey(state, action) {
       return {
         ...state,
-        curClickedNodeKey: action.payload
-      }
+        curClickedNodeKey: action.payload,
+      };
     },
-    setFlowModalClose (state, action) {
+    setFlowModalClose(state, action) {
       return {
         ...state,
         flowModalOpen: false,
-        isReactFlowInModal: false
-      }
+        isReactFlowInModal: false,
+      };
     },
-    setAlternativeModalOpen (state, action) {
+    setAlternativeModalOpen(state, action) {
       return {
         ...state,
-        alternativeModalOpen: true
-      }
+        alternativeModalOpen: true,
+      };
     },
-    setUpdateModalOpen (state, action) {
+    setUpdateModalOpen(state, action) {
       return {
         ...state,
-        updateModalOpen: true
-      }
+        updateModalOpen: true,
+      };
     },
-    setAddNodeModalOpen (state, action) {
+    setAddNodeModalOpen(state, action) {
       return {
         ...state,
-        addNodeModalOpen: true
-      }
+        addNodeModalOpen: true,
+      };
     },
-    setSaveModalOpen (state, action) {
+    setSaveModalOpen(state, action) {
       return {
         ...state,
-        saveModalOpen: true
-      }
+        saveModalOpen: true,
+      };
     },
-    setSaveModalClose (state, action) {
+    setSaveModalClose(state, action) {
       return {
         ...state,
-        saveModalOpen: false
-      }
+        saveModalOpen: false,
+      };
     },
-    setAddNodeModalClose (state, action) {
+    setAddNodeModalClose(state, action) {
       return {
         ...state,
-        addNodeModalOpen: false
-      }
+        addNodeModalOpen: false,
+      };
     },
-    setUpdateModalClose (state, action) {
+    setUpdateModalClose(state, action) {
       return {
         ...state,
-        updateModalOpen: false
-      }
+        updateModalOpen: false,
+      };
     },
-    setAlternativeModalClose (state, action) {
+    setAlternativeModalClose(state, action) {
       return {
         ...state,
-        alternativeModalOpen: false
-      }
+        alternativeModalOpen: false,
+      };
     },
-    setRefineModalOpen (state, action) {
+    setRefineModalOpen(state, action) {
       return {
         ...state,
-        refineModalOpen: true
-      }
+        refineModalOpen: true,
+      };
     },
-    setFixWeaknessModalOpen (state, action) {
+    setFixWeaknessModalOpen(state, action) {
       return {
         ...state,
-        fixWeaknessModalOpen: true
-      }
+        fixWeaknessModalOpen: true,
+      };
     },
-    setFixWeaknessModalClose (state, action) {
+    setFixWeaknessModalClose(state, action) {
       return {
         ...state,
-        fixWeaknessModalOpen: false
-      }
+        fixWeaknessModalOpen: false,
+      };
     },
-    setRefineModalClose (state, action) {
+    setRefineModalClose(state, action) {
       return {
         ...state,
-        refineModalOpen: false
-      }
+        refineModalOpen: false,
+      };
     },
-    setCurSelectedNodeKey (state, action) {
+    setCurSelectedNodeKey(state, action) {
       return {
         ...state,
-        curSelectedNodeKey: action.payload
-      }
+        curSelectedNodeKey: action.payload,
+      };
     },
-    setMindmapOpen (state, action) {
+    setMindmapOpen(state, action) {
       return {
         ...state,
-        mindmapOpen: true
-      }
+        mindmapOpen: true,
+      };
     },
-    setMindmapClose (state, action) {
+    setMindmapClose(state, action) {
       // console.log('set Modal Open is called')
       return {
         ...state,
-        mindmapOpen: false
-      }
+        mindmapOpen: false,
+      };
     },
-    toggleElabPromptKeywords (state, action) {
-      const del_dim = action.payload
+    toggleElabPromptKeywords(state, action) {
+      const del_dim = action.payload;
 
-      let selectedKeywords = [...state.selectedKeywords]
+      let selectedKeywords = [...state.selectedKeywords];
 
       if (selectedKeywords.includes(del_dim)) {
-        selectedKeywords = selectedKeywords.filter(c => c !== del_dim)
+        selectedKeywords = selectedKeywords.filter((c) => c !== del_dim);
       } else {
-        selectedKeywords.push(del_dim)
+        selectedKeywords.push(del_dim);
       }
 
       return {
@@ -244,196 +324,200 @@ const editorSlice = createSlice({
         // visiblePrompts: state.prompts.filter(c =>
         //   selectedKeywords.includes(c['keyword'])
         // ),
-        selectedPrompts: state.selectedPrompts.filter(c =>
-          selectedKeywords.includes(c['keyword'])
-        )
-      }
+        selectedPrompts: state.selectedPrompts.filter((c) =>
+          selectedKeywords.includes(c["keyword"])
+        ),
+      };
     },
-    toggleWeakness (state, action) {
-      const del_dim = action.payload
+    toggleWeakness(state, action) {
+      const del_dim = action.payload;
 
-      let selectedWeaknesses = [...state.selectedWeaknesses]
+      let selectedWeaknesses = [...state.selectedWeaknesses];
 
       if (selectedWeaknesses.includes(del_dim)) {
-        selectedWeaknesses = selectedWeaknesses.filter(c => c !== del_dim)
+        selectedWeaknesses = selectedWeaknesses.filter((c) => c !== del_dim);
       } else {
-        selectedWeaknesses.push(del_dim)
+        selectedWeaknesses.push(del_dim);
       }
 
       return {
         ...state,
         selectedWeaknesses: selectedWeaknesses,
-      }
+      };
     },
     setCurSelection(state, action) {
       return {
         ...state,
-        curSelection: action.payload
-      }
+        curSelection: action.payload,
+      };
     },
-    setPromptKeywords (state, action) {
+    setPromptKeywords(state, action) {
       // console.log(action.payload)
 
       return {
         ...state,
-        allKeywords: action.payload
-      }
+        allKeywords: action.payload,
+      };
     },
-    setWeaknesses (state, action) {
+    setWeaknesses(state, action) {
       return {
         ...state,
-        weaknesses: action.payload
-      }
+        weaknesses: action.payload,
+      };
     },
-    initPrompts (state, action) {
+    initPrompts(state, action) {
       return {
         ...state,
         selectedPrompts: [],
         prompts: [],
-        promptStatus: 'empty',
+        promptStatus: "empty",
         allKeywords: [],
-        selectedKeywords: []
-      }
+        selectedKeywords: [],
+      };
     },
-    setStudyCondition (state, action) {
-      const cond = action.payload
+    setStudyCondition(state, action) {
+      const cond = action.payload;
       return {
         ...state,
-        condition: cond
-      }
+        condition: cond,
+      };
     },
-    setPrompts (state, action) {
+    setPrompts(state, action) {
       return {
         ...state,
-        prompts: action.payload
-      }
+        prompts: action.payload,
+      };
     },
-    setCounterArguments (state, action) {
+    setCounterArguments(state, action) {
       return {
         ...state,
-        counterArguments: action.payload
-      }
+        counterArguments: action.payload,
+      };
     },
-    resetSupportingArguments (state, action) {
+    setEditorSliceState(state, action) {
+      const {} = action.payload;
+    },
+    resetSupportingArguments(state, action) {
       return {
         ...state,
         supportingArguments: [],
-        selectedSupportingArguments: []
-      }
+        selectedSupportingArguments: [],
+      };
     },
-    resetCounterArguments (state, action) {
+    resetCounterArguments(state, action) {
       return {
         ...state,
         counterArguments: [],
-        selectedCounterArguments: []
-      }
+        selectedCounterArguments: [],
+      };
     },
-    resetWeaknesses (state, action) {
+    resetWeaknesses(state, action) {
       return {
         ...state,
         weaknesses: [],
-        selectedWeaknesses: []
-      }
+        selectedWeaknesses: [],
+      };
     },
-    resetPrompts (state, action) {
+    resetPrompts(state, action) {
       return {
         ...state,
         prompts: [],
         selectedPrompts: [],
-      }
+      };
     },
-    setSupportingArguments (state, action) {
+    setSupportingArguments(state, action) {
       return {
         ...state,
-        supportingArguments: action.payload
-      }
+        supportingArguments: action.payload,
+      };
     },
-    setPromptStatus (state, action) {
+    setPromptStatus(state, action) {
       return {
         ...state,
-        promptStatus: action.payload
-      }
+        promptStatus: action.payload,
+      };
     },
-    handleSelectedPromptsChanged (state, action) {
-      const p = action.payload
-      const copy = [...state.selectedPrompts]
+    handleSelectedPromptsChanged(state, action) {
+      const p = action.payload;
+      const copy = [...state.selectedPrompts];
 
-      const index = copy.findIndex(x => x['prompt'] === p['prompt'])
+      const index = copy.findIndex((x) => x["prompt"] === p["prompt"]);
       if (index > -1) {
-        copy.splice(index, 1)
+        copy.splice(index, 1);
       } else {
-        copy.push(p)
+        copy.push(p);
       }
 
       return {
         ...state,
-        selectedPrompts: copy
-      }
+        selectedPrompts: copy,
+      };
     },
-    handleSelectedWeaknessChanged (state, action) {
-      const p = action.payload
-      const copy = [...state.selectedWeaknesses]
+    handleSelectedWeaknessChanged(state, action) {
+      const p = action.payload;
+      const copy = [...state.selectedWeaknesses];
 
-      console.log("payload: ", p)
-      console.log("selected: ", copy)
+      console.log("payload: ", p);
+      console.log("selected: ", copy);
 
-      const index = copy.findIndex(x => x === p)
+      const index = copy.findIndex((x) => x === p);
       if (index > -1) {
-        copy.splice(index, 1)
+        copy.splice(index, 1);
       } else {
-        copy.push(p)
+        copy.push(p);
       }
 
       return {
         ...state,
-        selectedWeaknesses: copy
-      }
+        selectedWeaknesses: copy,
+      };
     },
-    handleSelectedCAChanged (state, action) {
-      const p = action.payload
-      const copy = [...state.selectedCounterArguments]
+    handleSelectedCAChanged(state, action) {
+      const p = action.payload;
+      const copy = [...state.selectedCounterArguments];
 
-      const index = copy.findIndex(x => x === p)
+      const index = copy.findIndex((x) => x === p);
       if (index > -1) {
-        copy.splice(index, 1)
+        copy.splice(index, 1);
       } else {
-        copy.push(p)
+        copy.push(p);
       }
 
       return {
         ...state,
-        selectedCounterArguments: copy
-      }
+        selectedCounterArguments: copy,
+      };
     },
-    handleSelectedSAChanged (state, action) {
-      const p = action.payload
-      const copy = [...state.selectedSupportingArguments]
+    handleSelectedSAChanged(state, action) {
+      const p = action.payload;
+      const copy = [...state.selectedSupportingArguments];
 
-      const index = copy.findIndex(x => x === p)
+      const index = copy.findIndex((x) => x === p);
       if (index > -1) {
-        copy.splice(index, 1)
+        copy.splice(index, 1);
       } else {
-        copy.push(p)
+        copy.push(p);
       }
 
       return {
         ...state,
-        selectedSupportingArguments: copy
-      }
-    } 
+        selectedSupportingArguments: copy,
+      };
+    },
   },
   extraReducers: {
     [generateRewrite.fulfilled]: (state, action) => {
-      const { res } = action.payload
+      const { res } = action.payload;
       return {
         ...state,
-        alterantives: res["candidates"]
-      }
-    }
-  }
-})
+        alterantives: res["candidates"],
+      };
+    },
+  },
+});
 
 export const {
+  setEditorSliceStates,
   setMindmapOpen,
   setMindmapClose,
   setFlowModalOpen,
@@ -466,7 +550,7 @@ export const {
   handleSelectedSAChanged,
   setIsCurNodeEditable,
   setCurClickedNodeKey,
-  resetPrompts, 
+  resetPrompts,
   resetWeaknesses,
   resetCounterArguments,
   resetSupportingArguments,
@@ -481,7 +565,7 @@ export const {
   setSaveModalClose,
   setIsReactFlowInModal,
   setRangeGenerationMode,
-  setTaskDescription
-} = editorSlice.actions
+  setTaskDescription,
+} = editorSlice.actions;
 
-export default editorSlice.reducer
+export default editorSlice.reducer;

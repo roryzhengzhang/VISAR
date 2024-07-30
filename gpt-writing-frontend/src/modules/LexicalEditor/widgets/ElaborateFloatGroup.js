@@ -105,6 +105,7 @@ export default function ElaborateFLoatingGroup({ editor }) {
 
     let condition;
     const rootElement = editor.getRootElement();
+    const domRange = nativeSelection.rangeCount > 0 ? nativeSelection.getRangeAt(0) : null
 
     if (type === "elaborate") {
       condition = selection != null &&
@@ -119,8 +120,7 @@ export default function ElaborateFLoatingGroup({ editor }) {
       isElaborate;
     }
 
-    if (condition) {
-      const domRange = nativeSelection.getRangeAt(0);
+    if (condition && domRange) {
       let rect;
       if (nativeSelection.anchorNode === rootElement) {
         let inner = rootElement;
@@ -139,10 +139,10 @@ export default function ElaborateFLoatingGroup({ editor }) {
     }
 
     return true;
-  }, [editor, isElaborate]);
+  }, [editor, isElaborate, type]);
 
   // fetch the strategic Keywordensions for elaborating the selected text
-  const fetchKeyword = () => {
+  const fetchKeyword = useCallback(() => {
     const selection = $getSelection();
     const selected_text = selection.getTextContent();
     const nodes = selection.getNodes();
@@ -150,14 +150,15 @@ export default function ElaborateFLoatingGroup({ editor }) {
     // console.log("Nodes:")
     // console.log(nodes)
     setPromptedText(selected_text);
+    console.log("[elaborate float group] selected text is", selected_text)
     
-    const fetchPromise = fetch('https://visar.app/api/keyword', {
+    const fetchPromise = fetch('http://127.0.0.1:5000/keyword', {
       method: 'POST',
       mode: 'cors',
       headers: {
-        Accept: 'application/json',
+        "Accept": 'application/json',
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
+        'Access-Control-Allow-Origin': '*',
       },
       body: JSON.stringify({
         prompt: selected_text,
@@ -169,18 +170,21 @@ export default function ElaborateFLoatingGroup({ editor }) {
         return res.json();
       })
       .then((res) => {
+        console.log("Test, the response is", res["response"])
         let Keywords = res["response"];
         dispatch(setPromptKeywords(Keywords));
         setFetchingKeyword(false);
+      }).catch(error => {
+        console.log("error is ", error)
       });
-  };
+  }, [dispatch]);
 
   const fetchDiscussionPoints = () => {
     dispatch(setPromptStatus("fetching"));
     setFetchingAlertOpen(true);
 
     // IP: https://visar.app:8088
-    fetch("https://visar.app/api/prompts", {
+    fetch("http://127.0.0.1:5000/prompts", {
       method: "POST",
       mode: "cors",
       headers: {
@@ -195,9 +199,11 @@ export default function ElaborateFLoatingGroup({ editor }) {
     })
       .then((response) => response.json())
       .then((response) => {
-        dispatch(setPrompts(response["response"]));
+        dispatch(setPrompts(response["response"])); // prompts is an array of {key: key, prompt: prompt (discussion point)}
         dispatch(setPromptStatus("fetched"));
-        setPage(1);
+        setPage(1);  
+        // each keyword can have multiple prompts
+        // if there are more than 6 prompts, there will be more than 1 page
       });
   };
 
@@ -208,7 +214,7 @@ export default function ElaborateFLoatingGroup({ editor }) {
       console.log(`selection: ${selected_text}`);
 
       const fetchPromise = fetch(
-        "http://https://visar.app/api/?" +
+        "http://http://localhost:5000/api/?" +
           new URLSearchParams({
             prompt: selected_text,
             mode: "elaborate",
@@ -259,12 +265,13 @@ export default function ElaborateFLoatingGroup({ editor }) {
     }
   }, [editor]);
 
+  // this is used to tell the editor to show the floating button
   useEffect(() => {
     // console.log(`isElaborate changed: ${isElaborate}`)
     editor.getEditorState().read(() => {
       updateFloatingGroup();
     });
-  }, [editor, isElaborate]);
+  }, [editor, isElaborate, updateFloatingGroup]);
 
   useEffect(() => {
     // const buttonElem = buttonRef.current;
@@ -318,7 +325,7 @@ export default function ElaborateFLoatingGroup({ editor }) {
         highPriority
       )
     );
-  }, [editor, setCurSelectedNodeKey]);
+  }, [editor, dispatch, fetchKeyword]);
 
   const onCLickElaboratePredict = () => {
     editor.update(() => {
@@ -362,9 +369,10 @@ export default function ElaborateFLoatingGroup({ editor }) {
 
   const handleContentSketchingClicked = (e) => {
     dispatch(loadNodes({ selectedText: promptedText, selectedKeywords: selectedKeywords , discussionPoints: selectedPrompts, curRangeNodeKey: curRangeNodeKey}));
+    // curRangeNodeKey is the selected text node in the paragraph
     dispatch(setFlowModalOpen());
-    dispatch(setRangeGenerationMode(true))
-    positionFloatingButton(buttonRef.current, null);
+    dispatch(setRangeGenerationMode(true)) //
+    positionFloatingButton(buttonRef.current, null); // hide the floating button (the second parameter is null)
     dispatch(setPromptStatus("empty"))
     dispatch(setIsReactFlowInModal())
   };

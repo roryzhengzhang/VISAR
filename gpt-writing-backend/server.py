@@ -1,29 +1,34 @@
 import re
 import os
 import json
-import openai
+from openai import OpenAI
 from flask import Flask, redirect, render_template, request, url_for, make_response, jsonify
 from flask_cors import CORS, cross_origin
 from pymongo import MongoClient
 
 app = Flask(__name__)
 cors = CORS(app)
+#CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
 app.config['CORS_HEADERS'] = 'Content-Type'
 model_type = "gpt-3.5-turbo"
 tempature = 0.6
 max_tokens = 2048
-enablePreload = False
+enablePreload = True # enable the preload of editor state, editor node, and flow node
 test = False
 
 with open('openai_key.json') as key_file:
-    openai.api_key = json.load(key_file)['key']
+    OpenAIClient = OpenAI(api_key=json.load(key_file)['key'])
 
 with open('mongoDB_key.json') as key_file:
     mongoDB_key = json.load(key_file)['key']
 
 # Update your mongoDB key here. You need to create a new mongoDB database called "gptwriting", and create collections called "users" and "interactionData" in the database.
-client = MongoClient(mongoDB_key)
-db = client.gptwriting
+try:
+    client = MongoClient(mongoDB_key)
+    db = client.gptwriting
+    print("Successfully connect to mongoDB")
+except:
+    print("fail to connect to mongoDB")
 
 
 
@@ -32,14 +37,22 @@ def signup():
     if request.method == "POST":
         response = request.get_json()
         username = response["username"]
-        password = response["password"]
+        #password = response["password"]
         condition = response["condition"]
-        print(f"username: {username}, password: {password}")
+        print(f"username: {username}")
         user = db.users.find_one({"username": username})
         if user is not None:
+            # there is no login, but "sign up" at this time
+            if enablePreload:
+                # get the states from drafe collections
+                state = db.drafts.find_one({"username": username, "sessionId": user["latestSessionId"]})
+                if state is None:
+                    return jsonify({"status": "success", "message": "Login successfully", "preload": False, "editorState": "", "flowSlice": "", "editorSlice": "", "taskProblem": "", "taskDescription": ""})
+                return jsonify({"status": "success", "message": "Login successfully", "preload": True, "editorState": state["editorState"], "flowSlice": state["flowSlice"], "editorSlice": state["editorSlice"], "taskProblem": "", "taskDescription": ""})
             # return existing user
             return jsonify({"status": "success", "message": "Login successfully", "preload": False, "editorState": "", "flowSlice": "", "editorSlice": "", "taskProblem": "", "taskDescription": ""})
-        db.users.insert_one({"username": username, "password": password, "condition": condition, "latestSessionId": -1, "condTopicMapping": {"1": 1, "2": 2, "3": 3, "4": 4, "5": 5}})
+        #db.users.insert_one({"username": username, "password": password, "condition": condition, "latestSessionId": -1, "condTopicMapping": {"1": 1, "2": 2, "3": 3, "4": 4, "5": 5}})
+        db.users.insert_one({"username": username, "condition": condition, "latestSessionId": -1, "condTopicMapping": {"1": 1, "2": 2, "3": 3, "4": 4, "5": 5}})
         print("Signup successfully")
         return jsonify({"status": "success", "message": "Login successfully", "preload": False, "editorState": "", "flowSlice": "", "editorSlice": "", "taskProblem": "", "taskDescription": ""})
 
@@ -137,7 +150,7 @@ def implementSupportingArgument(supportingArgument, argumentSupported):
     ]
 
     # prompt = f'''Please list the counter arguments that can challenge the argument: "Houston is a good city because it has a convenient transportaion and afforable living cost"'''
-    response = openai.ChatCompletion.create(
+    response = OpenAIClient.chat.completions.create(
         model=model_type,
         messages=messages,
         temperature=tempature,
@@ -160,7 +173,7 @@ def implementCounterArgument(keyword, counterArgument, argumentAttacked):
     ]
 
     # prompt = f'''Please list the counter arguments that can challenge the argument: "Houston is a good city because it has a convenient transportaion and afforable living cost"'''
-    response = openai.ChatCompletion.create(
+    response = OpenAIClient.chat.completions.create(
         model=model_type,
         messages=messages,
         temperature=tempature,
@@ -180,7 +193,7 @@ def implementElaboration(prompt, context):
         {"role": "user", "content": f'''Please write a paragraph that elaborates on my argument "{context}" by considering the following discussion point "{prompt}":'''}
     ]
 
-    response = openai.ChatCompletion.create(
+    response = OpenAIClient.chat.completions.create(
         model=model_type,
         messages=messages,
         temperature=tempature,
@@ -200,7 +213,7 @@ def generateStartingSentence(keyword, discussionPoints, globalContext):
         {"role": "user", "content": f'''Write a starting sentence for the paragraph that elaborates on the argument {globalContext} from the perspective of {keyword}'''}
     ]
 
-    response = openai.ChatCompletion.create(
+    response = OpenAIClient.chat.completions.create(
         model=model_type,
         messages=messages,
         temperature=tempature,
@@ -223,7 +236,7 @@ def implementTopicSentence():
         {"role": "user", "content": f'''Please write a sentence that claim my argument "{prompt}":'''}
     ]
 
-    response = openai.ChatCompletion.create(
+    response = OpenAIClient.chat.completions.create(
         model=model_type,
         messages=messages,
         temperature=tempature,
@@ -246,7 +259,7 @@ def generateTopicSentence(prompt, context):
         {"role": "user", "content": f'''Please write a sentence that claim my argument "{prompt}":'''}
     ]
 
-    response = openai.ChatCompletion.create(
+    response = OpenAIClient.chat.completions.create(
         model=model_type,
         messages=messages,
         temperature=tempature,
@@ -272,7 +285,7 @@ def gpt_implement_counter_argument():
         ]
 
         # prompt = f'''Please list the counter arguments that can challenge the argument: "Houston is a good city because it has a convenient transportaion and afforable living cost"'''
-        response = openai.ChatCompletion.create(
+        response = OpenAIClient.chat.completions.create(
             model=model_type,
             messages=messages,
             temperature=tempature,
@@ -303,7 +316,7 @@ def gpt_implement_supporting_argument():
         ]
 
         # prompt = f'''Please list the counter arguments that can challenge the argument: "Houston is a good city because it has a convenient transportaion and afforable living cost"'''
-        response = openai.ChatCompletion.create(
+        response = OpenAIClient.chat.completions.create(
             model=model_type,
             messages=messages,
             temperature=tempature,
@@ -333,7 +346,7 @@ def gpt_implement_elaboration():
             {"role": "user", "content": f'''Please write a paragraph that elaborates on my argument "{context}" by considering the following discussion point "{prompt}":'''}
         ]
 
-        response = openai.ChatCompletion.create(
+        response = OpenAIClient.chat.completions.create(
             model=model_type,
             messages=messages,
             temperature=tempature,
@@ -365,7 +378,7 @@ def gpt_keyword_sentence():
             {"role": "user", "content": f'''Write a starting sentence for the paragraph that elaborates on the argument {context} from the perspective of {prompt}'''}
         ]
 
-        response = openai.ChatCompletion.create(
+        response = OpenAIClient.chat.completions.create(
             model=model_type,
             messages=messages,
             temperature=tempature,
@@ -383,7 +396,7 @@ def gpt_keyword_sentence():
 def gpt_inference():
     if request.method == "GET":
         prompt = request.args.get("prompt")
-        response = openai.ChatCompletion.create(
+        response = OpenAIClient.chat.completions.create(
             model=model_type,
             prompt=prompt,
             temperature=tempature,
@@ -393,6 +406,17 @@ def gpt_inference():
         res = {
             "response": response.choices[0].text.strip()
         }
+        return jsonify(res)
+
+@app.route("/keyword2", methods=["POST"])
+def keyword():
+    if request.method == "POST":
+        response = request.get_json()
+        prompt = response["prompt"]
+
+        res = {
+                "response": prompt
+            }
         return jsonify(res)
 
 
@@ -468,7 +492,7 @@ def gpt_fetch_keywords():
         # if mode == "evidence":
         #     prompt = evidence_example + "\n\n" + "Types of evidence for supporting: " + prompt
 
-        response = openai.ChatCompletion.create(
+        response = OpenAIClient.chat.completions.create(
             model=model_type,
             messages=messages,
             temperature=tempature,
@@ -551,7 +575,7 @@ def gpt_fetch_prompts():
                 {"role": "user", "content": f'''Please list key discussion points that are worth to include in order to support arguemnt: "{context}" from perspective of {key}'''},
             ]
 
-            response = openai.ChatCompletion.create(
+            response = OpenAIClient.chat.completions.create(
                 model=model_type,
                 messages=messages,
                 temperature=tempature,
@@ -607,7 +631,7 @@ def gpt_rewrite():
 
             prompt = f"Rephrase the following sentence in a different way: {curSent}"
             print(f"[/rewrite] prompt: {prompt}")
-            response = openai.ChatCompletion.create(
+            response = OpenAIClient.chat.completions.create(
                 model=model_type,
                 messages=messages,
                 temperature=tempature,
@@ -628,7 +652,7 @@ def gpt_rewrite():
                 {"role": "user", "content": f'''Rephrase the following sentence "{curSent}" with the instruction: "{furInstruction}"'''}
             ]
 
-            response = openai.ChatCompletion.create(
+            response = OpenAIClient.chat.completions.create(
                 model=model_type,
                 messages=messages,
                 temperature=tempature,
@@ -648,7 +672,7 @@ def gpt_rewrite():
                     "content": f'''I just made an argument: {curSent}. I know this argument has the following logical weaknesses: {"; ".join(weaknesses)}. Rewrite the argument to fix the logical weaknesses.'''''}
             ]
 
-            response = openai.ChatCompletion.create(
+            response = OpenAIClient.chat.completions.create(
                 model=model_type,
                 messages=messages,
                 temperature=tempature,
@@ -736,7 +760,7 @@ Based on the argumentation theory, find logical weaknesses of the argument: "Not
     prompt = elaborate_example + "\n\n" + \
         f'''Based on the argumentation theory, find logical weaknesses of the argument: "Notre Dame is a great school to attend because it has outstanding faculty"'''
 
-    response = openai.ChatCompletion.create(
+    response = OpenAIClient.chat.completions.create(
         model=model_type,
         messages=messages,
         temperature=tempature,
@@ -787,7 +811,7 @@ def gpt_supporting_argument():
             {"role": "user", "content": f'''Please list kinds of supporting arguments or evidences that can increase the credibility of the argument: {context}"'''},
         ]
 
-        response = openai.ChatCompletion.create(
+        response = OpenAIClient.chat.completions.create(
             model=model_type,
             messages=messages,
             temperature=tempature,
@@ -823,7 +847,7 @@ def gpt_counter_argument():
             {"role": "user", "content": f'''Please list the counter arguments that can challenge the argument: "{context}" from the perspective of "{keyword}. Directly list the counter arguments, do not include any prefix sentence."'''},
         ]
 
-        response = openai.ChatCompletion.create(
+        response = OpenAIClient.chat.completions.create(
             model=model_type,
             messages=messages,
             temperature=tempature,
@@ -871,7 +895,7 @@ def gpt_completion():
             {"role": "user", "content": f'''Please complete the following prompt: "{prompt}"'''},
         ]
 
-        response = openai.ChatCompletion.create(
+        response = OpenAIClient.chat.completions.create(
             model=model_type,
             messages=messages,
             temperature=tempature,
@@ -1010,7 +1034,7 @@ def get_generate_from_sketch():
             for dp in depGraph[keyword]:
                 gpt_prompt = f'''Please elaborate the argument "${globalContext}" from the perspective of ${keyword} by considering the following questions: ${dp["content"]}'''
 
-                response = openai.ChatCompletion.create(
+                response = OpenAIClient.chat.completions.create(
                     model=model_type,
                     prompt=gpt_prompt,
                     temperature=tempature,
@@ -1020,6 +1044,45 @@ def get_generate_from_sketch():
 
         output["generations"] = generations
         return jsonify(output)
+
+@app.route("/synthesize", methods=["POST"])
+def synthesize_thesis():
+    if request.method == "POST":
+        response = request.get_json()
+
+        keyPoints = response["keyPoints"]
+        keyPointsSentence = ""
+
+        for index, point in enumerate(keyPoints, 1):
+            keyPointsSentence += f"{index}. {point}\n"
+        
+        print("key point sentence is", keyPointsSentence)
+        messages = [
+            {"role": "system", "content": "You are a helpful writing assistant. Your student has gathered several key points/facts, but he cannot see the bigger picture of these ideas. Therefore, you are given those key points/facts, and you need to think of the thesis statement that introduces the main topic and purpose of those key points/facts."},
+            {"role": "user", "content": '''Here are several separate key points:
+1. In healthcare, AI algorithms can analyze medical data to provide accurate diagnoses and personalized treatment plans, while machine learning models predict disease outbreaks, enabling preventative measures. Additionally, robotic surgery, powered by AI, offers precision and reduces recovery time for patients.
+2. For sustainable development, AI optimizes the performance and efficiency of renewable energy sources like wind and solar power. Smart grids, managed by AI, balance energy supply and demand, reducing wastage. Furthermore, predictive maintenance, facilitated by AI, minimizes downtime and repair costs for renewable energy infrastructure.
+3. In education, AI-driven personalized learning platforms adapt to individual student needs, enhancing learning outcomes. Virtual tutors, powered by AI, provide round-the-clock assistance and support to students. Data analytics in education helps identify areas where students struggle, allowing for targeted interventions.
+
+Please synthesize these key points into a cohesive thesis statement.'''},
+            {"role": "assistant", "content":"The integration of artificial intelligence (AI) into various sectors can lead to significant advancements in healthcare, sustainable development through renewable energy, and education technology, ultimately transforming society."},
+            {"role": "user", "content":f'''Here are several separate key points:
+             {keyPointsSentence}
+Please synthesize these key points into a cohesive thesis statement.'''}
+        ]
+
+        response = OpenAIClient.chat.completions.create(
+            model=model_type,
+            messages=messages,
+            temperature=tempature,
+            max_tokens=max_tokens
+        )
+
+        res = response.choices[0].message.content.strip()
+
+        response = {"response": res}
+        return jsonify(response)
+
 
 
 if __name__ == '__main__':

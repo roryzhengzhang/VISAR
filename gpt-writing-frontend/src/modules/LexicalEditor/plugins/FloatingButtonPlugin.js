@@ -29,6 +29,7 @@ import CounterArgumentMenu from "../widgets/CounterArgumentMenu";
 import SupportingEvidenceMenu from "../widgets/SupportingEvidenceMenu";
 import ControlConditionMenu from "../widgets/ControlConditionMenu";
 import { ArgumentativeMenu } from "../widgets/ArgumentativeMenu";
+import BottomUpMenu from "../widgets/BottomUpMenu";
 
 export default function FloatingButtonPlugin() {
   const [editor] = useLexicalComposerContext();
@@ -68,6 +69,7 @@ export default function FloatingButtonPlugin() {
       {condition === "advanced" && createPortal(<ArgumentativeMenu editor={editor} />, document.body)}
       {condition === "advanced" && createPortal(<CounterArgumentMenu editor={editor} />, document.body)}
       {condition === "advanced" && createPortal(<SupportingEvidenceMenu editor={editor} />, document.body)}
+      {condition === "advanced" && createPortal(<BottomUpMenu editor={editor}/>, document.body)}
     </div>
   );
 }

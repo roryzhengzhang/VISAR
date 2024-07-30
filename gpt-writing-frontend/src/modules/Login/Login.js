@@ -48,17 +48,17 @@ export default function SignIn () {
   const navigate = useNavigate()
 
   async function authenticate () {
-    const res = await fetch('https://visar.app/api/signup', {
+    const res = await fetch('http://127.0.0.1:5000/signup', {
       method: 'POST',
       mode: 'cors',
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Content-Type': 'application/json',
-        Accept: 'application/json'
+        "Accept": 'application/json'
       },
       body: JSON.stringify({
         username: username,
-        password: password,
+        //password: password,
         condition: cond
       })
     })
@@ -71,9 +71,9 @@ export default function SignIn () {
         let flowSlice = null
         let editorSlice = null
         if (res.preload === true) {
-          editorState = res.editorState
-          flowSlice = res.flowSlice
-          editorSlice = res.editorSlice
+          editorState = JSON.parse(res.editorState)
+          flowSlice = JSON.parse(res.flowSlice)
+          editorSlice = JSON.parse(res.editorSlice)
         }
 
         const taskProblem = res.taskProblem

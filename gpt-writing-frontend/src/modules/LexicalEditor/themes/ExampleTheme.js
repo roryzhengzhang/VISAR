@@ -1,8 +1,8 @@
-import type {EditorThemeClasses} from 'lexical';
+import {EditorThemeClasses} from 'lexical';
 
 import '../styles.css';
 
-const theme: EditorThemeClasses = {
+const theme = {
   ltr: "ltr",
   rtl: "rtl",
   placeholder: "editor-placeholder",

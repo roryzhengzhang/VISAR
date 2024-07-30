@@ -93,15 +93,15 @@ export default function CounterArgumentMenu ({ editor }) {
     }
 
     const rootElement = editor.getRootElement()
+    const domRange = nativeSelection.rangeCount > 0 ? nativeSelection.getRangeAt(0) : null
 
     const condition =
       selection != null &&
       rootElement != null &&
       rootElement.contains(nativeSelection.anchorNode) &&
-      showPanel
+      showPanel && domRange
 
     if (condition) {
-      const domRange = nativeSelection.getRangeAt(0)
       let rect
       if (nativeSelection.anchorNode === rootElement) {
         let inner = rootElement
@@ -164,13 +164,13 @@ export default function CounterArgumentMenu ({ editor }) {
 
       let keyword
       while(depGraph[flowKey]["type"] !== "featuredBy") {
-        flowKey = depGraph[flowKey]["parent"]
+        flowKey = depGraph[flowKey]["parent"] 
       }
 
-      keyword = depGraph[flowKey]["prompt"]
+      keyword = depGraph[flowKey]["prompt"] // the keyword needs to be the type of "featuredBy"
 
       // IP: https://visar.app:8088
-      fetch('https://visar.app/api/counterArguments', {
+      fetch('http://visar.app/api/counterArguments', {
         method: 'POST',
         mode: 'cors',
         headers: {
@@ -249,7 +249,7 @@ export default function CounterArgumentMenu ({ editor }) {
         }
         
       }
-  
+      // the range mode is not set to true (if using elaborate, it is set to true)
       dispatch(insertNewGeneratedNodes(data));
       dispatch(setFlowModalOpen());
       positionFloatingButton(groupRef.current, null);

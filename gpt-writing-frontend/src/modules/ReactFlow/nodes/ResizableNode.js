@@ -1,6 +1,6 @@
-import { memo, useState, useEffect } from 'react'
-import { Handle, Position, useNodeId } from 'reactflow'
-import { useSelector, useDispatch } from 'react-redux'
+import { memo, useState, useEffect } from "react";
+import { Handle, Position, useNodeId } from "reactflow";
+import { useSelector, useDispatch } from "react-redux";
 import {
   setNodeData,
   setNodeSelected,
@@ -8,12 +8,12 @@ import {
   setCurModifiedFlowNodeKey,
   setNodeDataAttribute,
   logInteractionData,
-} from '../../LexicalEditor/slices/FlowSlice'
+} from "../../LexicalEditor/slices/FlowSlice";
 import {
   setCurSelectedNodeKey,
   setIsReactFlowInModal,
-  setUpdateModalOpen
-} from '../../LexicalEditor/slices/EditorSlice'
+  setUpdateModalOpen,
+} from "../../LexicalEditor/slices/EditorSlice";
 import {
   Box,
   Typography,
@@ -22,60 +22,78 @@ import {
   Grid,
   IconButton,
   Tooltip,
-  TextField
-} from '@mui/material'
-import EditIcon from '@mui/icons-material/Edit'
-import { NodeResizer } from '@reactflow/node-resizer'
-import { cyan, teal, pink, amber } from '@mui/material/colors'
-import HourglassBottomIcon from '@mui/icons-material/HourglassBottom'
-import '@reactflow/node-resizer/dist/style.css'
-import { selectTextNodeByKey } from '../../LexicalEditor/utils'
-import FormGroup from '@mui/material/FormGroup'
-import FormControlLabel from '@mui/material/FormControlLabel'
-import Switch from '@mui/material/Switch'
-import Button from '@mui/material/Button'
-import LoopIcon from '@mui/icons-material/Loop'
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
+  TextField,
+} from "@mui/material";
+import EditIcon from "@mui/icons-material/Edit";
+import { NodeResizer } from "@reactflow/node-resizer";
+import { cyan, teal, pink, amber } from "@mui/material/colors";
+import HourglassBottomIcon from "@mui/icons-material/HourglassBottom";
+import "@reactflow/node-resizer/dist/style.css";
+import { selectTextNodeByKey } from "../../LexicalEditor/utils";
+import FormGroup from "@mui/material/FormGroup";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Switch from "@mui/material/Switch";
+import Button from "@mui/material/Button";
+import LoopIcon from "@mui/icons-material/Loop";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import {
+  SELECTION_CHANGE_COMMAND,
+  $getSelection,
+  $setSelection,
+  $isRangeSelection,
+  $createParagraphNode,
+  $getNodeByKey,
+  $isParagraphNode,
+  $isTextNode,
+  $createRangeSelection,
+  $getRoot,
+  $createTextNode,
+  createCommand,
+  KEY_BACKSPACE_COMMAND,
+  KEY_ENTER_COMMAND,
+  INSERT_LINE_BREAK_COMMAND,
+  $isNodeSelection,
+} from "lexical";
 
 const ResizableNode = ({ data }) => {
-  const [editor] = useLexicalComposerContext()
-  const dispatch = useDispatch()
-  const avatarColors = useSelector(state => state.flow.avatarColors)
+  const [editor] = useLexicalComposerContext();
+  const dispatch = useDispatch();
+  const avatarColors = useSelector((state) => state.flow.avatarColors);
   const flowEditorNodeMapping = useSelector(
-    state => state.flow.flowEditorNodeMapping
-  )
-  const nodeId = useNodeId()
-  const [isEditing, setIsEditing] = useState(false)
-  const [shiftKeyDown, isShiftKeyDown] = useState(false)
-  const [oldText, setOldText] = useState('')
-  const depGraph = useSelector(state => state.flow.dependencyGraph)
-  const updateModalOpen = useSelector(state => state.editor.updateModalOpen)
-  const nodeData = useSelector(state => state.flow.nodeData)
+    (state) => state.flow.flowEditorNodeMapping
+  );
+  const nodeId = useNodeId();
+  const [isEditing, setIsEditing] = useState(false);
+  const [shiftKeyDown, isShiftKeyDown] = useState(false);
+  const [oldText, setOldText] = useState("");
+  const depGraph = useSelector((state) => state.flow.dependencyGraph);
+  const updateModalOpen = useSelector((state) => state.editor.updateModalOpen);
+  const nodeData = useSelector((state) => state.flow.nodeData);
   const curModifiedFlowNodeKey = useSelector(
-    state => state.flow.curModifiedFlowNodeKey
-  )
-  const username = useSelector(state => state.editor.username)
-  const sessionId = useSelector(state => state.editor.sessionId)
+    (state) => state.flow.curModifiedFlowNodeKey
+  );
+  const username = useSelector((state) => state.editor.username);
+  const sessionId = useSelector((state) => state.editor.sessionId);
   const sortedDependents = useSelector(
-    state => state.flow.dependentsOfModifiedNodes
-  )
+    (state) => state.flow.dependentsOfModifiedNodes
+  );
   const isReactFlowInModal = useSelector(
-    state => state.editor.isReactFlowInModal
-  )
-  const isLazyUpdate = useSelector(state => state.flow.isLazyUpdate)
+    (state) => state.editor.isReactFlowInModal
+  );
+  const isLazyUpdate = useSelector((state) => state.flow.isLazyUpdate);
 
   const onFinishButtonClick = () => {
-    setIsEditing(false)
-    console.log('update Modal gonna be open')
+    setIsEditing(false);
+    console.log("update Modal gonna be open");
 
     dispatch(
       setDepGraphNodeAttribute({
         nodeKey: nodeId,
-        attribute: 'prompt',
-        value: nodeData[nodeId].label
+        attribute: "prompt",
+        value: nodeData[nodeId].label,
       })
-    )
+    );
     dispatch(
       logInteractionData({
         username: username,
@@ -84,82 +102,82 @@ const ResizableNode = ({ data }) => {
         interactionData: {
           nodeId: nodeId,
           newText: nodeData[nodeId].label,
-          oldText: oldText
-        }
+          oldText: oldText,
+        },
       })
-    )
-    setOldText(nodeData[nodeId].label)
+    );
+    setOldText(nodeData[nodeId].label);
 
     if (!updateModalOpen && isLazyUpdate === false) {
-      dispatch(setCurModifiedFlowNodeKey(nodeId))
+      dispatch(setCurModifiedFlowNodeKey(nodeId));
       if (isReactFlowInModal === false) {
-        dispatch(setUpdateModalOpen())
+        dispatch(setUpdateModalOpen());
       }
     }
-
-  }
+  };
 
   useEffect(() => {
-    setOldText(nodeData[nodeId].label)
-  })
+    setOldText(nodeData[nodeId].label);
+  });
 
   // useEffect(() => {
   //   console.log("sortedDependents changed", sortedDependents)
   //   console.log("nodeId", nodeId)
   // }, [sortedDependents])
 
-  const handleUpdateSwitchChange = event => {
+  const handleUpdateSwitchChange = (event) => {
     dispatch(
       setDepGraphNodeAttribute({
         nodeKey: nodeId,
-        attribute: 'needsUpdate',
-        value: event.target.checked
+        attribute: "needsUpdate",
+        value: event.target.checked,
       })
-    )
-  }
+    );
+  };
 
   return (
     <div>
       {nodeId in depGraph && (
         <>
-          <Handle type='target' id='top' position={Position.Top} />
+          <Handle type="target" id="top" position={Position.Top} />
           <div
-            tabIndex='0'
+            tabIndex="0"
             style={{
               padding: 10,
               // cursor: shiftKeyDown ? 'pointer' : 'auto',
-              cursor: 'pointer',
+              cursor: "pointer",
               border:
-                nodeData[nodeId]['selected'] === true
-                  ? 'solid green'
+                nodeData[nodeId]["selected"] === true
+                  ? "solid green"
                   : sortedDependents.includes(nodeId)
-                  ? 'solid yellow'
-                  : '',
+                  ? "solid yellow"
+                  : "",
               borderRadius: 4,
-              borderWidth: 5
             }}
-            onKeyDown={e => {
+            onKeyDown={(e) => {
               if (e.shiftKey) {
-                console.log('shift key down')
-                isShiftKeyDown(true)
+                console.log("shift key down");
+                isShiftKeyDown(true);
               }
             }}
-            onKeyUp={e => {
+            onKeyUp={(e) => {
               if (!e.shiftKey) {
-                isShiftKeyDown(false)
+                isShiftKeyDown(false);
               }
             }}
-            onClick={e => {
+            onClick={(e) => {
               if (!updateModalOpen) {
-                const key = flowEditorNodeMapping[nodeId]
-                dispatch(setNodeSelected(key))
-                console.log(`node ${nodeId} selected`)
+                const key = flowEditorNodeMapping[nodeId]; // HighlightNode key
+                dispatch(setNodeSelected(key));
+                console.log("[resizable node] flow editor node mapping is ", flowEditorNodeMapping)
+                console.log(`node ${nodeId} selected`);
+                console.log(`editor node with key ${key} is selected`)
               }
-              editor.setEditable(false)
+              editor.setEditable(false);
             }}
           >
-            <Box style={{ alignItems: 'center' }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Box style={{ alignItems: "center" }}>
+              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
                 <Avatar
                   style={{ width: 30, height: 30, fontSize: 18 }}
                   sx={{ bgcolor: avatarColors[nodeData[nodeId].type] }}
@@ -176,21 +194,21 @@ const ResizableNode = ({ data }) => {
               </Box>
               <Box
                 style={{
-                  textAlign: 'center',
-                  justifyContent: 'center',
-                  alignItems: 'center',
+                  textAlign: "center",
+                  justifyContent: "center",
+                  alignItems: "center",
                   marginLeft: 40,
                   marginRight: 40,
-                  marginBottom: 20
+                  marginBottom: 20,
                 }}
               >
                 {!isEditing ? (
                   <Box>
-                    <Typography variant='body1' style={{ fontSize: 20 }}>
+                    <Typography variant="body1" style={{ fontSize: 20 }}>
                       {nodeData[nodeId].label}
                     </Typography>
                     {!updateModalOpen && (
-                      <Tooltip title='Edit'>
+                      <Tooltip title="Edit">
                         <IconButton onClick={() => setIsEditing(true)}>
                           <EditIcon />
                         </IconButton>
@@ -200,35 +218,35 @@ const ResizableNode = ({ data }) => {
                 ) : (
                   <Box>
                     <TextField
-                      id='edit-node-text'
+                      id="edit-node-text"
                       style={{
-                        minWidth: 300
+                        minWidth: 300,
                       }}
                       value={nodeData[nodeId].label}
-                      onChange={event =>
+                      onChange={(event) =>
                         dispatch(
                           setNodeDataAttribute({
                             nodeKey: nodeId,
-                            attribute: 'label',
-                            value: event.target.value
+                            attribute: "label",
+                            value: event.target.value,
                           })
                         )
                       }
                       // onBlur={() => setIsEditing(false)}
-                      onKeyDown={event => {
-                        if (event.key === 'Enter') {
-                          setIsEditing(false)
-                          console.log('update Modal gonna be open')
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          setIsEditing(false);
+                          console.log("update Modal gonna be open");
                           dispatch(
                             setDepGraphNodeAttribute({
                               nodeKey: nodeId,
-                              attribute: 'prompt',
-                              value: nodeData[nodeId].label
+                              attribute: "prompt",
+                              value: nodeData[nodeId].label,
                             })
-                          )
+                          );
                           if (!updateModalOpen && isLazyUpdate === false) {
-                            dispatch(setCurModifiedFlowNodeKey(nodeId))
-                            dispatch(setUpdateModalOpen())
+                            dispatch(setCurModifiedFlowNodeKey(nodeId));
+                            dispatch(setUpdateModalOpen());
                           }
                         }
                       }}
@@ -260,12 +278,12 @@ const ResizableNode = ({ data }) => {
                       sx={{
                         mt: 2,
                         mb: 2,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
                       }}
                     >
-                      <Button variant='contained' onClick={onFinishButtonClick}>
+                      <Button variant="contained" onClick={onFinishButtonClick}>
                         Done
                       </Button>
                     </Box>
@@ -274,12 +292,12 @@ const ResizableNode = ({ data }) => {
               </Box>
             </Box>
           </div>
-          <Handle type='source' id='bottom' position={Position.Bottom} />
+          <Handle type="source" id="bottom" position={Position.Bottom} />
           {/* <Handle type="source" id="right" position={Position.Right} /> */}
         </>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default memo(ResizableNode)
+export default memo(ResizableNode);

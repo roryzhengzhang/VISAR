@@ -1,6 +1,7 @@
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { Box, Typography } from "@mui/material";
 import { useSelector } from "react-redux";
+import React from "react";
 
 export default function TaskDescriptionPlugin() {
     const [editor] = useLexicalComposerContext();

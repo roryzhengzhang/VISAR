@@ -3,6 +3,7 @@ import { Handle, Position, NodeProps } from "reactflow";
 
 import { NodeResizer } from "@reactflow/node-resizer";
 import { Typography, Box } from "@mui/material";
+import React from "react";
 
 import "@reactflow/node-resizer/dist/style.css";
 

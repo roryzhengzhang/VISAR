@@ -51,7 +51,7 @@ export function ArgumentativeMenu ({ editor }) {
   const buttonRef = useRef(null)
   const dispatch = useDispatch()
   const nodeData = useSelector(state => state.flow.nodeData)
-  const [isMenuOpen, setMenuOpen] = useState(false)
+  const [isMenuOpen, setMenuOpen] = useState(false) // the floating menu
   const curSelectedNodeKey = useSelector(
     state => state.editor.curSelectedNodeKey
   )
@@ -82,23 +82,25 @@ export function ArgumentativeMenu ({ editor }) {
     const modalElem = buttonRef.current
     const nativeSelection = window.getSelection()
 
+    console.log('updateArgumentativeMenu called')
+
     if (modalElem === null) {
       return
     }
 
     const rootElement = editor.getRootElement()
+    const domRange = nativeSelection.rangeCount > 0 ? nativeSelection.getRangeAt(0) : null
 
     const condition =
       selection != null &&
       rootElement != null &&
       rootElement.contains(nativeSelection.anchorNode) &&
-      isMenuOpen
+      isMenuOpen && domRange
 
     // console.log('[condition] isMenuOpen is ', isMenuOpen)
     // console.log('Whole condition is ', condition)
 
     if (condition) {
-      const domRange = nativeSelection.getRangeAt(0)
       let rect
       if (nativeSelection.anchorNode === rootElement) {
         let inner = rootElement
@@ -114,10 +116,11 @@ export function ArgumentativeMenu ({ editor }) {
       positionFloatingButton(modalElem, rect)
     } else {
       // console.log(`[updateFloatingGroup]: element is inactive, isElaborate: ${isElaborate}`)
+      console.log("cannot show the argumentative menu")
       positionFloatingButton(modalElem, null)
     }
 
-    console.log('updateArgumentativeMenu called')
+    
 
     return true
   }, [editor, isMenuOpen])
